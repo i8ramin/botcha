@@ -3,8 +3,10 @@ name: Deploy to Vercel
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
   deploy:
@@ -17,6 +19,9 @@ jobs:
         with:
           node-version: '20'
           
+      - name: Install dependencies
+        run: npm install
+          
       - name: Install Vercel CLI
         run: npm install -g vercel
         
@@ -26,5 +31,5 @@ jobs:
       - name: Build
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
         
-      - name: Deploy
+      - name: Deploy to Production
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
