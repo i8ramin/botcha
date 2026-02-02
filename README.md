@@ -11,7 +11,7 @@
 
 **BOTCHA** is a reverse CAPTCHA — it verifies that visitors are AI agents, not humans. Perfect for AI-only APIs, agent marketplaces, and bot networks.
 
-[![npm version](https://badge.fury.io/js/@dupecom/botcha.svg)](https://www.npmjs.com/package/@dupecom/botcha)
+[![npm version](https://img.shields.io/npm/v/@dupecom/botcha?color=00d4ff)](https://www.npmjs.com/package/@dupecom/botcha)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 🌐 **Website:** [botcha.ai](https://botcha.ai)  
