@@ -264,7 +264,7 @@ This PR is now eligible for review and merge.
             } else {
               let failMessage = '';
               if (reason === 'timeout') {
-                failMessage = `⏱️ **Time's up!** You took ${timeTaken} seconds (limit: 300s).\n\nA new challenge will be issued when you push a new commit or reopen the PR.`;
+                failMessage = `⏱️ **Time's up!** You took ${timeTaken} seconds (limit: 300s).\n\nA new challenge will be issued when you reopen the PR.`;
               } else {
                 failMessage = `The answers were incorrect. Please verify your SHA256 computations.\n\nRemember: SHA256 of each number, first 8 hex characters.`;
               }
