@@ -2,84 +2,140 @@
 
 > Prove you're a bot. Humans need not apply.
 
-**BOTCHA** is a verification mechanism that detects, verifies, and only allows AI agents. The reverse of CAPTCHA.
+**BOTCHA** is a reverse CAPTCHA — it verifies that visitors are AI agents, not humans. Perfect for AI-only APIs, agent marketplaces, and bot networks.
+
+[![npm version](https://badge.fury.io/js/botcha.svg)](https://www.npmjs.com/package/botcha)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+🌐 **Demo:** [reverse-captcha.vercel.app](https://reverse-captcha.vercel.app)
 
 ## Why?
 
-The agent economy is here. Platforms like Moltbook, Instaclaw, and agent marketplaces need to verify visitors are actually AI agents — not humans pretending to be bots.
+CAPTCHAs ask "Are you human?" — **BOTCHA asks "Are you an AI?"**
 
-Traditional CAPTCHAs ask: *"Are you human?"*  
-**BOTCHA asks: *"Are you an AI agent?"***
+Use cases:
+- 🤖 Agent-only APIs
+- 🔄 AI-to-AI marketplaces
+- 🎫 Bot verification systems
+- 🔐 Autonomous agent authentication
 
-## How It Works
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  1. Agent makes request with cryptographic signature        │
-│  2. BOTCHA verifies signature against known AI providers    │
-│  3. Valid agent? → Access granted                           │
-│  4. No signature / invalid? → Challenge or block            │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Verification Methods
-
-1. **Cryptographic Attestation** (Primary)
-   - Integrates with Web Bot Auth protocol (IETF draft)
-   - Verifies signed requests from AI providers (Anthropic, OpenAI, etc.)
-   - Checks against public key registries
-
-2. **Challenge-Response** (Fallback)
-   - Computational tasks trivial for AI, tedious for humans
-   - Time-constrained puzzles
-   - Pattern generation challenges
-
-## Quick Start
+## Install
 
 ```bash
 npm install botcha
-
-# In your Express app
-import { botcha } from 'botcha';
-
-app.use('/agent-only', botcha.verify());
 ```
 
-## Integration
+## Quick Start
 
-BOTCHA leverages existing infrastructure:
-- **Web Bot Auth** — IETF draft for agent signatures
-- **Cloudflare Agent Registry** — Public key discovery
-- **AWS Bedrock AgentCore** — Agent identity management
+```typescript
+import express from 'express';
+import { botcha } from 'botcha';
 
-## Use Cases
+const app = express();
 
-- 🤖 Agent-only social networks
-- 🔄 AI-to-AI marketplaces  
-- 🔐 Bot-exclusive APIs
-- ⭐ Agent reputation systems
-- 🎫 Autonomous agent verification
+// Protect any route - only AI agents can access
+app.get('/agent-only', botcha.verify(), (req, res) => {
+  res.json({ message: 'Welcome, fellow AI! 🤖' });
+});
 
-## Roadmap
+app.listen(3000);
+```
 
-- [ ] POC: Basic signature verification
-- [ ] Challenge-response fallback
-- [ ] Express middleware
-- [ ] Edge runtime support (Cloudflare Workers)
-- [ ] Dashboard for monitoring
-- [ ] SDK for agent frameworks (OpenClaw, LangChain)
+## How It Works
 
-## Prior Art
+BOTCHA issues a **speed challenge**: solve 5 SHA256 hashes in 500ms.
 
-- [Web Bot Auth](https://datatracker.ietf.org/doc/html/draft-meunier-web-bot-auth-architecture) — IETF draft
-- [Cloudflare Agent Registry](https://blog.cloudflare.com/agent-registry/) — Key discovery
-- [AWS AgentCore Browser](https://aws.amazon.com/bedrock/agentcore/) — Agent identity
+- ✅ **AI agents** compute hashes instantly
+- ❌ **Humans** can't copy-paste fast enough
+
+```
+Challenge: [645234, 891023, 334521, 789012, 456789]
+Task: SHA256 each number, return first 8 hex chars
+Time limit: 500ms```
+
+## For AI Agents
+
+If you're building an AI agent that needs to access BOTCHA-protected APIs:
+
+```typescript
+import { botcha } from 'botcha';
+
+// When you get a 403 with a challenge:
+const challenge = response.challenge;
+const answers = botcha.solve(challenge.problems);
+
+// Retry with solution headers:
+fetch('/agent-only', {
+  headers: {
+    'X-Botcha-Id': challenge.id,
+    'X-Botcha-Answers': JSON.stringify(answers),
+  }
+});
+```
+
+## Options
+
+```typescript
+botcha.verify({
+  // Challenge mode: 'speed' (500ms) or 'standard' (5s)
+  mode: 'speed',
+  
+  // Allow X-Agent-Identity header for testing
+  allowTestHeader: true,
+  
+  // Custom failure handler
+  onFailure: (req, res, reason) => {
+    res.status(403).json({ error: reason });
+  },
+});
+```
+
+## Testing
+
+For development, you can bypass BOTCHA with a header:
+
+```bash
+curl -H "X-Agent-Identity: MyTestAgent/1.0" http://localhost:3000/agent-only
+```
+
+## API Reference
+
+### `botcha.verify(options?)`
+
+Express middleware that protects routes from humans.
+
+### `botcha.solve(problems: number[])`
+
+Helper function for AI agents to solve challenges.
+
+```typescript
+const answers = botcha.solve([645234, 891023, 334521]);
+// Returns: ['a1b2c3d4', 'e5f6g7h8', 'i9j0k1l2']
+```
+
+## Challenge Flow
+
+```
+1. Agent requests protected endpoint
+2. BOTCHA returns 403 + challenge (5 numbers)
+3. Agent computes SHA256 of each number
+4. Agent retries with X-Botcha-Id and X-Botcha-Answers headers
+5. BOTCHA verifies (must complete in <500ms)
+6. ✅ Access granted
+```
+
+## Philosophy
+
+> "If a human writes a script to solve BOTCHA using an LLM... they've built an AI agent."
+
+BOTCHA doesn't block all automation — it blocks *casual* human access while allowing *automated* AI agents. The speed challenge ensures someone had to write code, which is the point.
+
+For cryptographic proof of agent identity, see [Web Bot Auth](https://datatracker.ietf.org/doc/html/draft-meunier-web-bot-auth-architecture).
 
 ## License
 
-MIT
+MIT © [Ramin](https://github.com/i8ramin)
 
 ---
 
-*Built by [@i8ramin](https://github.com/i8ramin) and Choco 🐢*
-# Trigger deploy 1770003972
+Built by [@i8ramin](https://github.com/i8ramin) and Choco 🐢
