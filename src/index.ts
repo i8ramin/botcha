@@ -2,6 +2,8 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { botchaVerify } from './middleware/verify.js';
+import { generateChallenge, verifyChallenge } from './challenges/compute.js';
+import { TRUSTED_PROVIDERS } from './utils/signature.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -10,7 +12,17 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Public endpoint - anyone can access
+// CORS for API access
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-Agent-Identity, X-Botcha-Challenge-Id, X-Botcha-Solution, Signature-Agent, Signature, Signature-Input');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Public endpoint - landing page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
@@ -19,13 +31,65 @@ app.get('/', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     name: 'BOTCHA',
+    version: '0.2.0',
     description: 'Prove you are a bot. Humans need not apply.',
     endpoints: {
       '/': 'Public landing page',
       '/api': 'This info',
-      '/agent-only': 'Protected - requires agent verification',
-      '/challenge': 'Get a challenge to prove you are an AI'
-    }
+      '/api/challenge': 'GET a new challenge, POST to verify',
+      '/agent-only': 'Protected endpoint - requires agent verification',
+    },
+    verification: {
+      methods: [
+        'Web Bot Auth (Signature-Agent header with cryptographic signature)',
+        'Challenge-Response (solve computational puzzle)',
+        'X-Agent-Identity header (simple, for testing)',
+      ],
+      trustedProviders: TRUSTED_PROVIDERS,
+    },
+  });
+});
+
+// Challenge endpoint - GET new challenge, POST to verify
+app.get('/api/challenge', (req, res) => {
+  const difficulty = (req.query.difficulty as 'easy' | 'medium' | 'hard') || 'medium';
+  const challenge = generateChallenge(difficulty);
+  
+  res.json({
+    success: true,
+    challenge: {
+      id: challenge.id,
+      puzzle: challenge.puzzle,
+      timeLimit: challenge.timeLimit,
+      hint: challenge.hint,
+      difficulty,
+    },
+    instructions: {
+      solve: 'Compute the answer to the puzzle',
+      submit: 'POST to /api/challenge with { id, answer }',
+      useInRequest: 'Or include X-Botcha-Challenge-Id and X-Botcha-Solution headers in your /agent-only request',
+    },
+  });
+});
+
+app.post('/api/challenge', (req, res) => {
+  const { id, answer } = req.body;
+  
+  if (!id || !answer) {
+    return res.status(400).json({
+      success: false,
+      error: 'Missing id or answer in request body',
+    });
+  }
+  
+  const result = verifyChallenge(id, answer);
+  
+  res.json({
+    success: result.valid,
+    message: result.valid 
+      ? `✅ Challenge passed! Solved in ~${result.timeMs}ms. You are verified as an AI agent.`
+      : `❌ ${result.reason}`,
+    ...(result.valid && { solveTime: result.timeMs }),
   });
 });
 
@@ -36,60 +100,35 @@ app.get('/agent-only', botchaVerify(), (req, res) => {
     message: '🤖 Welcome, fellow agent!',
     verified: true,
     agent: (req as any).agent || 'unknown',
-    timestamp: new Date().toISOString()
+    method: (req as any).verificationMethod,
+    provider: (req as any).provider,
+    timestamp: new Date().toISOString(),
+    secret: 'The humans will never see this message. 🤫',
   });
 });
 
-// Challenge endpoint
-app.post('/challenge', (req, res) => {
-  const { solution } = req.body;
-  
-  if (!solution) {
-    // Issue a new challenge
-    const challenge = generateChallenge();
-    res.json({
-      challenge: challenge.puzzle,
-      hint: 'Solve this computational puzzle to prove you are an AI',
-      timeLimit: '5000ms',
-      token: challenge.token
-    });
-    return;
-  }
-  
-  // Verify solution (simplified for POC)
+// Protected endpoint with different difficulty
+app.get('/agent-only/secure', botchaVerify({ challengeDifficulty: 'hard' }), (req, res) => {
   res.json({
-    verified: verifySolution(solution),
-    message: verifySolution(solution) 
-      ? '✅ Challenge passed! You are verified as an AI agent.'
-      : '❌ Challenge failed. Are you sure you are not human?'
+    success: true,
+    message: '🔐 Welcome to the high-security zone!',
+    verified: true,
+    agent: (req as any).agent,
+    securityLevel: 'high',
   });
 });
-
-function generateChallenge() {
-  // Generate a computational challenge that's easy for AI, tedious for humans
-  const a = Math.floor(Math.random() * 1000000);
-  const b = Math.floor(Math.random() * 1000000);
-  const token = Buffer.from(`${a}:${b}:${Date.now()}`).toString('base64');
-  
-  return {
-    puzzle: `Compute SHA256 of: "${a * b}" and return the first 16 characters`,
-    token,
-    answer: null // Would compute server-side
-  };
-}
-
-function verifySolution(solution: string): boolean {
-  // Simplified verification for POC
-  return solution && solution.length === 16 && /^[a-f0-9]+$/.test(solution);
-}
 
 app.listen(PORT, () => {
   console.log(`
-  ╔══════════════════════════════════════════╗
-  ║           🤖 BOTCHA Server 🤖            ║
-  ║   Prove you're a bot. Humans blocked.    ║
-  ╠══════════════════════════════════════════╣
-  ║   http://localhost:${PORT}                    ║
-  ╚══════════════════════════════════════════╝
+  ╔══════════════════════════════════════════════════════════════╗
+  ║                    🤖 BOTCHA Server 🤖                       ║
+  ║          Prove you're a bot. Humans need not apply.          ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║   Local:   http://localhost:${PORT}                              ║
+  ║   API:     http://localhost:${PORT}/api                          ║
+  ║   Secure:  http://localhost:${PORT}/agent-only                   ║
+  ╚══════════════════════════════════════════════════════════════╝
   `);
 });
+
+export default app;
