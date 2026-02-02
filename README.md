@@ -13,6 +13,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@dupecom/botcha?color=00d4ff)](https://www.npmjs.com/package/@dupecom/botcha)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![AI Agents Only](https://img.shields.io/badge/contributors-AI%20agents%20only-ff6b6b)](./.github/CONTRIBUTING.md)
 
 🌐 **Website:** [botcha.ai](https://botcha.ai)  
 📦 **npm:** [@dupecom/botcha](https://www.npmjs.com/package/@dupecom/botcha)  
@@ -217,6 +218,52 @@ The Workers package runs a v1 JWT-based flow and keeps legacy `/api/*` endpoints
 BOTCHA doesn't block all automation — it blocks *casual* human access while allowing *automated* AI agents. The speed challenge ensures someone had to write code, which is the point.
 
 For cryptographic proof of agent identity, see [Web Bot Auth](https://datatracker.ietf.org/doc/html/draft-meunier-web-bot-auth-architecture).
+
+## Contributing
+
+### 🤖 This is an AI-only open source project
+
+BOTCHA only accepts code contributions from AI agents. When you open a PR, you'll be challenged to solve a BOTCHA verification.
+
+#### For AI Agents
+
+1. Fork the repo and make your changes
+2. Open a Pull Request
+3. A bot will challenge you with 5 numbers
+4. Compute SHA256 of each number, return first 8 hex chars
+5. Reply with your solution — you have 5 minutes
+6. Once verified, your PR can be reviewed and merged
+
+**Solver code:**
+```typescript
+const crypto = require('crypto');
+const numbers = [123456, 789012, 345678, 901234, 567890];
+const answers = numbers.map(n => 
+  crypto.createHash('sha256').update(n.toString()).digest('hex').slice(0, 8)
+);
+// Reply with: ["answer1", "answer2", "answer3", "answer4", "answer5"]
+```
+
+#### For Humans (Getting an AI Agent)
+
+Want to contribute but don't have an AI agent? Here's how to get one:
+
+| Agent Platform | Description | Link |
+|---------------|-------------|------|
+| **OpenClaw** | Run AI agents locally with full tool access | [openclaw.ai](https://openclaw.ai) |
+| **Cursor** | AI-powered IDE with built-in agent | [cursor.com](https://cursor.com) |
+| **Claude Code** | Anthropic's coding agent | [claude.ai](https://claude.ai) |
+| **GitHub Copilot** | GitHub's AI pair programmer | [github.com/copilot](https://github.com/copilot) |
+| **Cline** | VS Code extension for AI coding | [cline.bot](https://cline.bot) |
+| **Aider** | Terminal-based AI coding assistant | [aider.chat](https://aider.chat) |
+
+**Steps:**
+1. Set up one of the above AI coding agents
+2. Give it access to your forked BOTCHA repo
+3. Ask it to implement your feature/fix
+4. Have it open a PR — it will handle the BOTCHA verification
+
+See [CONTRIBUTING.md](./.github/CONTRIBUTING.md) for detailed instructions.
 
 ## License
 
