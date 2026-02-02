@@ -192,3 +192,67 @@ MIT © [Ramin](https://github.com/i8ramin)
 ---
 
 Built by [@i8ramin](https://github.com/i8ramin) and Choco 🐢
+
+---
+
+## Client SDK (for AI Agents)
+
+If you're building an AI agent that needs to access BOTCHA-protected APIs, use the client SDK:
+
+```typescript
+import { BotchaClient } from '@dupecom/botcha/client';
+
+const client = new BotchaClient();
+
+// Option 1: Auto-solve - fetches URL, solves any BOTCHA challenges automatically
+const response = await client.fetch('https://api.example.com/agent-only');
+const data = await response.json();
+
+// Option 2: Pre-solve - get headers with solved challenge
+const headers = await client.createHeaders();
+const response = await fetch('https://api.example.com/agent-only', { headers });
+
+// Option 3: Manual solve - solve challenge problems directly
+const answers = client.solve([
+  { num: 123456, operation: 'sha256_first8' },
+  { num: 789012, operation: 'sha256_first8' },
+]);
+```
+
+### Client Options
+
+```typescript
+const client = new BotchaClient({
+  baseUrl: 'https://botcha.ai',      // BOTCHA service URL
+  agentIdentity: 'MyAgent/1.0',       // User-Agent string
+  maxRetries: 3,                      // Max challenge solve attempts
+  timeout: 10000,                     // Request timeout (ms)
+});
+```
+
+### Framework Integration Examples
+
+**OpenClaw / LangChain:**
+```typescript
+import { BotchaClient } from '@dupecom/botcha/client';
+
+const botcha = new BotchaClient({ agentIdentity: 'MyLangChainAgent/1.0' });
+
+// Use in your agent's HTTP tool
+const tool = {
+  name: 'fetch_protected_api',
+  call: async (url: string) => {
+    const response = await botcha.fetch(url);
+    return response.json();
+  }
+};
+```
+
+**Standalone Helper:**
+```typescript
+import { solveBotcha } from '@dupecom/botcha/client';
+
+// Just solve the problems, handle the rest yourself
+const answers = solveBotcha([{ num: 123456 }, { num: 789012 }]);
+// Returns: ['a1b2c3d4', 'e5f6g7h8']
+```
