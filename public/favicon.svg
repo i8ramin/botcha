@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <!-- Head gradient (blue-gray metallic) -->
+    <linearGradient id="head" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#d4e4e8"/>
+      <stop offset="50%" style="stop-color:#a8c4c8"/>
+      <stop offset="100%" style="stop-color:#6a8a90"/>
+    </linearGradient>
+    <!-- Antenna ball gradient -->
+    <linearGradient id="antenna" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f4a020"/>
+      <stop offset="100%" style="stop-color:#d45020"/>
+    </linearGradient>
+    <!-- Eye ring gradient -->
+    <linearGradient id="eyering" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5ec4d4"/>
+      <stop offset="100%" style="stop-color:#3090a0"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Ear pieces -->
+  <rect x="2" y="42" width="12" height="24" rx="3" fill="#8b3030"/>
+  <rect x="86" y="42" width="12" height="24" rx="3" fill="#8b3030"/>
+  
+  <!-- Main head -->
+  <rect x="14" y="22" width="72" height="68" rx="14" fill="url(#head)" stroke="#708488" stroke-width="2"/>
+  
+  <!-- Antenna base -->
+  <ellipse cx="50" cy="24" rx="10" ry="5" fill="#3a4a50"/>
+  
+  <!-- Antenna ball -->
+  <circle cx="50" cy="12" r="10" fill="url(#antenna)"/>
+  <ellipse cx="47" cy="9" rx="4" ry="3" fill="#ffd080" opacity="0.6"/>
+  
+  <!-- Left eye -->
+  <circle cx="35" cy="50" r="13" fill="url(#eyering)"/>
+  <circle cx="35" cy="50" r="9" fill="#fff"/>
+  <circle cx="33" cy="48" r="3" fill="#e8f4f4"/>
+  
+  <!-- Right eye -->
+  <circle cx="65" cy="50" r="13" fill="url(#eyering)"/>
+  <circle cx="65" cy="50" r="9" fill="#fff"/>
+  <circle cx="63" cy="48" r="3" fill="#e8f4f4"/>
+  
+  <!-- Nose (triangle) -->
+  <polygon points="50,54 43,66 57,66" fill="#b85040"/>
+  
+  <!-- Mouth -->
+  <rect x="30" y="74" width="40" height="12" rx="6" fill="#e8e8e8" stroke="#404040" stroke-width="1.5"/>
+  <!-- Mouth lines -->
+  <line x1="40" y1="74" x2="40" y2="86" stroke="#404040" stroke-width="1.5"/>
+  <line x1="50" y1="74" x2="50" y2="86" stroke="#404040" stroke-width="1.5"/>
+  <line x1="60" y1="74" x2="60" y2="86" stroke="#404040" stroke-width="1.5"/>
+</svg>
