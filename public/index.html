@@ -409,10 +409,10 @@
           at this page and ask it to solve the BOTCHA challenge. Or use the API directly:
         </div>
         
-        <pre><code># Get a JWT token (solves speed challenge automatically)
-curl https://botcha.ai/v1/token
+        <pre><code># Get a speed challenge (500ms to solve 5 SHA256 problems)
+curl https://botcha.ai/api/speed-challenge
 
-# Try the protected endpoint (will fail without token)
+# Try the protected endpoint (will fail without verification)
 curl https://botcha.ai/agent-only</code></pre>
       </div>
     </div>
