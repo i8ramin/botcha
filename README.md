@@ -21,10 +21,12 @@
 
 ## Packages
 
-| Package | Runtime | Install |
-|---------|---------|---------|
-| [`@dupecom/botcha`](https://www.npmjs.com/package/@dupecom/botcha) | Node.js / Express | `npm install @dupecom/botcha` |
-| [`@dupecom/botcha-cloudflare`](./packages/cloudflare-workers) | Cloudflare Workers | `npm install @dupecom/botcha-cloudflare` |
+| Package | Description | Install |
+|---------|-------------|---------|
+| [`@dupecom/botcha`](https://www.npmjs.com/package/@dupecom/botcha) | Core library + Express middleware | `npm install @dupecom/botcha` |
+| [`@dupecom/botcha-cli`](https://www.npmjs.com/package/@dupecom/botcha-cli) | CLI tool for testing & debugging | `npm install -g @dupecom/botcha-cli` |
+| [`@dupecom/botcha-langchain`](https://www.npmjs.com/package/@dupecom/botcha-langchain) | LangChain integration for AI agents | `npm install @dupecom/botcha-langchain` |
+| [`@dupecom/botcha-cloudflare`](./packages/cloudflare-workers) | Cloudflare Workers runtime | `npm install @dupecom/botcha-cloudflare` |
 
 ## Why?
 
@@ -300,3 +302,44 @@ import { solveBotcha } from '@dupecom/botcha/client';
 const answers = solveBotcha([123456, 789012]);
 // Returns: ['a1b2c3d4', 'e5f6g7h8']
 ```
+
+## CLI Tool
+
+Test and debug BOTCHA-protected endpoints from the command line:
+
+```bash
+# Test an endpoint
+npx @dupecom/botcha-cli test https://api.example.com/agent-only
+
+# Benchmark performance
+npx @dupecom/botcha-cli benchmark https://api.example.com/agent-only --iterations 100
+
+# Check headers
+npx @dupecom/botcha-cli headers https://api.example.com
+```
+
+See [`packages/cli/README.md`](./packages/cli/README.md) for full CLI documentation.
+
+## LangChain Integration
+
+Give your LangChain agents automatic BOTCHA-solving abilities:
+
+```typescript
+import { BotchaTool } from '@dupecom/botcha-langchain';
+import { createReactAgent } from '@langchain/langgraph/prebuilt';
+
+const agent = createReactAgent({
+  llm: new ChatOpenAI({ model: 'gpt-4' }),
+  tools: [
+    new BotchaTool({ baseUrl: 'https://api.botcha.ai' }),
+    // ... other tools
+  ],
+});
+
+// Agent can now access BOTCHA-protected APIs automatically
+await agent.invoke({
+  messages: [{ role: 'user', content: 'Access the bot-only API' }]
+});
+```
+
+See [`packages/langchain/README.md`](./packages/langchain/README.md) for full documentation.
