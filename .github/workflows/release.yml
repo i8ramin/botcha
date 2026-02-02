@@ -52,49 +52,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Generate Release Notes
-        id: notes
-        run: |
-          VERSION="${{ needs.check-version.outputs.version }}"
-          
-          # Get commits since last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          
-          if [ -n "$LAST_TAG" ]; then
-            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s" --no-merges | head -20)
-          else
-            COMMITS=$(git log --pretty=format:"- %s" --no-merges -20)
-          fi
-          
-          # Build release notes
-          NOTES="## What's Changed
-
-          ${COMMITS}
-
-          ## Packages
-
-          | Package | Version |
-          |---------|---------|
-          | @dupecom/botcha | ${VERSION} |
-          | @dupecom/botcha-cli | $(node -p \"require('./packages/cli/package.json').version\") |
-          | @dupecom/botcha-cloudflare | $(node -p \"require('./packages/cloudflare-workers/package.json').version\") |
-          | @dupecom/botcha-langchain | $(node -p \"require('./packages/langchain/package.json').version\") |
-
-          ---
-          *Auto-generated release*"
-          
-          # Save to file (multiline safe)
-          echo "$NOTES" > release_notes.md
+        with:
+          fetch-depth: 0
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ needs.check-version.outputs.version }}
           name: v${{ needs.check-version.outputs.version }}
-          body_path: release_notes.md
+          generate_release_notes: true
           draft: false
           prerelease: false
-          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
