@@ -31,6 +31,8 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "publish:all": "bash scripts/publish-all.sh",
+    "publish:dry": "bash scripts/publish-all.sh --dry-run",
     "release:patch": "npm version patch && git push --follow-tags",
     "release:minor": "npm version minor && git push --follow-tags",
     "release:major": "npm version major && git push --follow-tags"
