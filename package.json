@@ -2,12 +2,15 @@
   "name": "botcha",
   "version": "0.1.0",
   "description": "Prove you're a bot. Humans need not apply.",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "keywords": ["captcha", "bot", "ai", "agent", "verification"],
   "author": "Ramin & Choco",
