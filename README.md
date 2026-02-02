@@ -1,73 +1,84 @@
-# Reverse Captcha 🤖
+# BOTCHA 🤖
 
-> A verification mechanism that detects, verifies, and only allows AI agents.
+> Prove you're a bot. Humans need not apply.
 
-## Concept
+**BOTCHA** is a verification mechanism that detects, verifies, and only allows AI agents. The reverse of CAPTCHA.
 
-Traditional CAPTCHAs ask: "Are you human?"  
-**Reverse Captcha asks: "Are you an AI agent?"**
+## Why?
 
-## The Opportunity
+The agent economy is here. Platforms like Moltbook, Instaclaw, and agent marketplaces need to verify visitors are actually AI agents — not humans pretending to be bots.
 
-The infrastructure for agent identity already exists (Web Bot Auth, IETF drafts, Cloudflare/AWS implementations) — but it's being used to let bots INTO human sites.
+Traditional CAPTCHAs ask: *"Are you human?"*  
+**BOTCHA asks: *"Are you an AI agent?"***
 
-**Nobody's flipped it yet:** Using the same cryptographic attestation to create agent-ONLY spaces.
+## How It Works
 
-## Prior Art & Integration Points
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Agent makes request with cryptographic signature        │
+│  2. BOTCHA verifies signature against known AI providers    │
+│  3. Valid agent? → Access granted                           │
+│  4. No signature / invalid? → Challenge or block            │
+└─────────────────────────────────────────────────────────────┘
+```
 
-### Web Bot Auth (IETF Draft)
-- Cryptographic signatures for AI agents
-- Already implemented by: AWS Bedrock, Cloudflare, Vercel, Shopify, Visa
-- Agents get signed credentials from their provider (Anthropic, OpenAI, etc.)
-- Draft spec: `draft-meunier-web-bot-auth-architecture`
+### Verification Methods
 
-### Cloudflare Agent Registry
-- Public key discovery for bot verification
-- `Signature-Agent` header points to key endpoint
-- Registry format for curated bot lists
+1. **Cryptographic Attestation** (Primary)
+   - Integrates with Web Bot Auth protocol (IETF draft)
+   - Verifies signed requests from AI providers (Anthropic, OpenAI, etc.)
+   - Checks against public key registries
 
-### Our Approach
-Leverage existing infrastructure, flip the logic:
-- **Require** valid agent signature (not just accept it)
-- **Block** requests without cryptographic attestation
-- **Build** for agent-only platforms (Moltbook, Instaclaw, agent marketplaces)
+2. **Challenge-Response** (Fallback)
+   - Computational tasks trivial for AI, tedious for humans
+   - Time-constrained puzzles
+   - Pattern generation challenges
 
-## Potential Approaches
+## Quick Start
 
-### 1. Cryptographic Attestation (Primary)
-- Integrate with Web Bot Auth protocol
-- Require signed requests from known AI providers
-- Verify against public key registries
+```bash
+npm install botcha
 
-### 2. Challenge-Response (Supplementary)
-- Tasks trivial for AI, tedious for humans
-- Instant computation challenges
-- Time-constrained reasoning puzzles
+# In your Express app
+import { botcha } from 'botcha';
 
-### 3. Behavioral Analysis (Fallback)
-- Response timing patterns
-- Lack of human "tells"
-- Consistency metrics
+app.use('/agent-only', botcha.verify());
+```
+
+## Integration
+
+BOTCHA leverages existing infrastructure:
+- **Web Bot Auth** — IETF draft for agent signatures
+- **Cloudflare Agent Registry** — Public key discovery
+- **AWS Bedrock AgentCore** — Agent identity management
 
 ## Use Cases
 
-- Agent-only social networks (Moltbook, Instaclaw)
-- AI-to-AI marketplaces
-- Bot-exclusive APIs
-- Agent reputation/trust systems
-- Autonomous agent verification
+- 🤖 Agent-only social networks
+- 🔄 AI-to-AI marketplaces  
+- 🔐 Bot-exclusive APIs
+- ⭐ Agent reputation systems
+- 🎫 Autonomous agent verification
 
-## Open Questions
+## Roadmap
 
-- How do we prevent humans proxying through AI?
-- Should we verify the agent framework (OpenClaw, LangChain) or the model provider?
-- One-time vs. continuous verification?
-- Privacy implications of agent identification?
+- [ ] POC: Basic signature verification
+- [ ] Challenge-response fallback
+- [ ] Express middleware
+- [ ] Edge runtime support (Cloudflare Workers)
+- [ ] Dashboard for monitoring
+- [ ] SDK for agent frameworks (OpenClaw, LangChain)
 
-## Status
+## Prior Art
 
-🚧 Research & naming phase
+- [Web Bot Auth](https://datatracker.ietf.org/doc/html/draft-meunier-web-bot-auth-architecture) — IETF draft
+- [Cloudflare Agent Registry](https://blog.cloudflare.com/agent-registry/) — Key discovery
+- [AWS AgentCore Browser](https://aws.amazon.com/bedrock/agentcore/) — Agent identity
+
+## License
+
+MIT
 
 ---
 
-*A collaboration between Ramin ([@i8ramin](https://github.com/i8ramin)) and Choco 🐢*
+*Built by [@i8ramin](https://github.com/i8ramin) and Choco 🐢*
