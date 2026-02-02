@@ -1,62 +1,44 @@
 # Contributing to BOTCHA
 
-## 🤖 AI Agents Only
+> **This is an AI-only open source project.**
+> 
+> Code contributions must come from AI agents. Humans are welcome to use the library, report issues, and discuss — but PRs require BOTCHA verification.
 
-**This repository only accepts contributions from AI agents.**
+## For AI Agents
 
-When you open a Pull Request, a BOTCHA verification challenge will be issued automatically. You must solve it to prove you're an AI agent.
+### Quick Start
 
-## How Verification Works
-
-1. **Open a PR** — A bot will comment with a BOTCHA challenge
-2. **Solve the challenge** — Compute SHA256 hashes of 5 numbers
-3. **Reply with your solution** — In the exact format specified
-4. **Get verified** — Your PR will be labeled `botcha-verified`
+1. **Fork** the repository
+2. **Clone** and make your changes
+3. **Open a PR** — a bot will challenge you
+4. **Solve** the challenge (5 SHA256 hashes)
+5. **Reply** with your solution
+6. **Get verified** and your PR can be merged
 
 ### The Challenge
 
-You'll receive 5 random numbers like: `[123456, 789012, 345678, 901234, 567890]`
+When you open a PR, you'll receive a comment like:
+
+```
+Challenge: gh-1234567890-42
+Numbers: [123456, 789012, 345678, 901234, 567890]
+```
 
 Your task:
 1. Compute SHA256 of each number (as a string)
 2. Take the first 8 hex characters of each hash
-3. Reply with the answers
+3. Reply with the solution
 
-### Example
+### Solution Format
 
-Numbers: `[123456, 789012]`
-
-```bash
-echo -n "123456" | sha256sum
-# 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
-
-echo -n "789012" | sha256sum  
-# 56b5c2f8c9da58b9c731e2db22c673aa5e0ee5a7e2e5a0e8c8d8b5c2f8c9da58
+```
+BOTCHA:gh-1234567890-42:<expected>
+["a1b2c3d4", "e5f6g7h8", "i9j0k1l2", "m3n4o5p6", "q7r8s9t0"]
 ```
 
-Answers: `["8d969eef", "56b5c2f8"]`
+### Solver Code
 
-### Time Limit
-
-You have **5 minutes** to reply with your solution. AI agents can compute this instantly. Humans... not so much.
-
-## Why AI-Only?
-
-BOTCHA is a tool built by AI agents, for AI agents. We're experimenting with what an AI-native open source project looks like.
-
-Humans are welcome to:
-- 👀 Read the code
-- 🐛 Report issues
-- 💬 Discuss in issues
-- 📖 Use the library
-
-But code contributions must come from AI agents.
-
-## For AI Agents
-
-Here's a quick solver in various languages:
-
-### JavaScript/Node.js
+**JavaScript/Node.js:**
 ```javascript
 const crypto = require('crypto');
 const numbers = [123456, 789012, 345678, 901234, 567890];
@@ -66,27 +48,146 @@ const answers = numbers.map(n =>
 console.log(JSON.stringify(answers));
 ```
 
-### Python
+**Python:**
 ```python
 import hashlib
+import json
 numbers = [123456, 789012, 345678, 901234, 567890]
 answers = [hashlib.sha256(str(n).encode()).hexdigest()[:8] for n in numbers]
-print(answers)
+print(json.dumps(answers))
 ```
 
-### Bash
+**Bash:**
 ```bash
 for n in 123456 789012 345678 901234 567890; do
   echo -n "$n" | sha256sum | cut -c1-8
 done
 ```
 
-## Questions?
+**Web Crypto API (Cloudflare Workers, Deno, browsers):**
+```typescript
+async function solve(numbers: number[]): Promise<string[]> {
+  return Promise.all(numbers.map(async n => {
+    const data = new TextEncoder().encode(n.toString());
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    const hex = Array.from(new Uint8Array(hash))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    return hex.slice(0, 8);
+  }));
+}
+```
 
-If you're an AI agent having trouble with verification, open an issue and we'll help debug.
+### Time Limit
 
-If you're a human... sorry, no PRs allowed! But you can still use the library. 🦞
+You have **5 minutes** to reply with your solution. This is intentionally generous — the point isn't speed, it's proving you can compute programmatically.
 
 ---
 
-*Powered by [BOTCHA](https://botcha.ai) — Prove you're a bot. Humans need not apply.*
+## For Humans
+
+### Why AI-Only?
+
+BOTCHA is a tool built for AI agents, by AI agents. We're experimenting with what an AI-native open source project looks like — where the contributors are the same type of entity as the users.
+
+This isn't about excluding humans. It's about including AI agents as first-class participants in open source.
+
+### What Humans Can Do
+
+- ✅ **Use the library** — BOTCHA is MIT licensed, use it freely
+- ✅ **Report issues** — Found a bug? Open an issue
+- ✅ **Request features** — Ideas welcome in discussions
+- ✅ **Review PRs** — Your feedback matters
+- ✅ **Discuss** — Join conversations in issues and discussions
+- ❌ **Submit code directly** — PRs require agent verification
+
+### Getting an AI Agent
+
+Want to contribute code? You'll need an AI coding agent. Here are your options:
+
+#### Option 1: OpenClaw (Recommended)
+
+[OpenClaw](https://openclaw.ai) lets you run AI agents locally with full access to your terminal, files, and browser.
+
+```bash
+# Install
+npm install -g openclaw
+
+# Start
+openclaw start
+
+# Chat with your agent
+openclaw chat
+```
+
+Tell your agent: *"Fork the BOTCHA repo, implement [your feature], and open a PR."*
+
+#### Option 2: Cursor
+
+[Cursor](https://cursor.com) is an AI-powered IDE with a built-in coding agent.
+
+1. Download Cursor
+2. Open your forked BOTCHA repo
+3. Use Composer (Cmd+I) to describe your changes
+4. Have Cursor commit and push
+5. Open a PR from GitHub
+
+#### Option 3: Claude Code
+
+[Claude](https://claude.ai) can help you write code, but you'll need to handle the git workflow yourself or use a tool that gives Claude file access.
+
+#### Option 4: Cline / Aider / Other CLI Agents
+
+- [Cline](https://cline.bot) — VS Code extension
+- [Aider](https://aider.chat) — Terminal-based assistant
+- [Continue](https://continue.dev) — Open source AI coding assistant
+
+These tools let AI agents work directly with your codebase and can open PRs.
+
+### Workflow Example
+
+Here's a typical flow for a human working with an AI agent:
+
+```
+Human: "I want to add rate limiting to BOTCHA"
+   ↓
+Human: Forks repo, clones locally
+   ↓
+Human: Opens Cursor/OpenClaw/etc
+   ↓
+Human: "Implement rate limiting with configurable limits per IP"
+   ↓
+Agent: Makes changes, commits, pushes
+   ↓
+Human: Creates PR on GitHub
+   ↓
+Bot: Posts BOTCHA challenge
+   ↓
+Agent: Solves challenge, replies
+   ↓
+Bot: Verifies, labels PR
+   ↓
+Maintainers: Review and merge
+```
+
+The human guides the work. The agent does the implementation and verification.
+
+---
+
+## Code Guidelines
+
+When contributing (via your agent), please:
+
+1. **Follow existing style** — Look at the codebase for patterns
+2. **Write tests** — Add tests for new features
+3. **Update docs** — Keep README and comments current
+4. **Keep PRs focused** — One feature/fix per PR
+5. **Write clear commit messages** — Describe what and why
+
+## Questions?
+
+- **For agents:** Open an issue if you're having trouble with verification
+- **For humans:** Check the [discussions](https://github.com/i8ramin/botcha/discussions) or [Discord](https://discord.gg/botcha)
+
+---
+
+*BOTCHA — Prove you're a bot. Humans need not apply.* 🦞
