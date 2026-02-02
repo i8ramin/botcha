@@ -13,10 +13,17 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// CORS
+// CORS + BOTCHA headers
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', '*');
+  
+  // BOTCHA discovery headers
+  res.header('X-Botcha-Version', '0.3.0');
+  res.header('X-Botcha-Enabled', 'true');
+  res.header('X-Botcha-Methods', 'speed-challenge,standard-challenge,web-bot-auth');
+  res.header('X-Botcha-Docs', 'https://botcha.ai/openapi.json');
+  
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });

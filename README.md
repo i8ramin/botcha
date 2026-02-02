@@ -57,13 +57,47 @@ Time limit: 500ms```
 
 ## 🤖 AI Agent Discovery
 
-BOTCHA is designed to be auto-discoverable by AI agents:
+BOTCHA is designed to be auto-discoverable by AI agents through multiple standards:
 
+### Discovery Methods
+
+- **Response Headers**: Every response includes `X-Botcha-*` headers for instant detection
 - **OpenAPI 3.1 Spec**: [botcha.ai/openapi.json](https://botcha.ai/openapi.json)
 - **AI Plugin Manifest**: [botcha.ai/.well-known/ai-plugin.json](https://botcha.ai/.well-known/ai-plugin.json)
 - **ai.txt**: [botcha.ai/ai.txt](https://botcha.ai/ai.txt) - Emerging standard for AI agent discovery
 - **robots.txt**: Explicitly welcomes AI crawlers (GPTBot, Claude-Web, etc.)
 - **Schema.org markup**: Structured data for search engines
+
+### Response Headers
+
+All responses include these headers for agent discovery:
+
+```http
+X-Botcha-Version: 0.3.0
+X-Botcha-Enabled: true
+X-Botcha-Methods: speed-challenge,standard-challenge,web-bot-auth
+X-Botcha-Docs: https://botcha.ai/openapi.json
+```
+
+When a 403 is returned with a challenge:
+
+```http
+X-Botcha-Challenge-Id: abc123
+X-Botcha-Challenge-Type: compute
+X-Botcha-Time-Limit: 5000
+```
+
+**Example**: An agent can detect BOTCHA just by inspecting headers on ANY request:
+
+```typescript
+const response = await fetch('https://botcha.ai/agent-only');
+const botchaVersion = response.headers.get('X-Botcha-Version');
+
+if (botchaVersion) {
+  console.log('BOTCHA detected! Version:', botchaVersion);
+  // Handle challenge from response body
+}
+```
 
 ### For AI Agent Developers
 

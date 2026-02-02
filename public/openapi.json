@@ -213,6 +213,24 @@
         "responses": {
           "200": {
             "description": "Access granted to verified agent",
+            "headers": {
+              "X-Botcha-Version": {
+                "schema": { "type": "string" },
+                "description": "BOTCHA version (e.g., 0.3.0)"
+              },
+              "X-Botcha-Enabled": {
+                "schema": { "type": "string" },
+                "description": "Whether BOTCHA is enabled (true/false)"
+              },
+              "X-Botcha-Methods": {
+                "schema": { "type": "string" },
+                "description": "Supported verification methods (comma-separated)"
+              },
+              "X-Botcha-Docs": {
+                "schema": { "type": "string" },
+                "description": "URL to OpenAPI documentation"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -231,7 +249,49 @@
             }
           },
           "403": {
-            "description": "Access denied - not an AI agent"
+            "description": "Access denied - not an AI agent. Challenge provided in response.",
+            "headers": {
+              "X-Botcha-Version": {
+                "schema": { "type": "string" },
+                "description": "BOTCHA version"
+              },
+              "X-Botcha-Challenge-Id": {
+                "schema": { "type": "string" },
+                "description": "Challenge ID to solve"
+              },
+              "X-Botcha-Challenge-Type": {
+                "schema": { "type": "string" },
+                "description": "Type of challenge (compute, speed, etc.)"
+              },
+              "X-Botcha-Time-Limit": {
+                "schema": { "type": "integer" },
+                "description": "Time limit in milliseconds"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "error": { "type": "string" },
+                    "message": { "type": "string" },
+                    "hint": { "type": "string" },
+                    "challenge": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "puzzle": { "type": "string" },
+                        "timeLimit": { "type": "string" },
+                        "hint": { "type": "string" },
+                        "submitHeader": { "type": "string" },
+                        "answerHeader": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

@@ -34,6 +34,13 @@ export function botchaVerify(options: BotchaOptions = {}) {
       ? generateChallenge(opts.challengeDifficulty)
       : undefined;
 
+    // Add challenge-specific headers
+    if (challenge) {
+      res.header('X-Botcha-Challenge-Id', challenge.id);
+      res.header('X-Botcha-Challenge-Type', 'compute');
+      res.header('X-Botcha-Time-Limit', challenge.timeLimit.toString());
+    }
+
     res.status(403).json({
       success: false,
       error: 'BOTCHA_VERIFICATION_FAILED',

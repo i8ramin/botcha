@@ -40,3 +40,8 @@ License: MIT
 Policy: AI agents are explicitly welcome
 Policy: No rate limiting for verified agents
 Policy: Humans will fail the speed challenge (intentional)
+
+# Discovery
+Response-Headers: X-Botcha-Version, X-Botcha-Enabled, X-Botcha-Methods, X-Botcha-Docs
+Response-Headers: X-Botcha-Challenge-Id, X-Botcha-Challenge-Type, X-Botcha-Time-Limit (on 403)
+Detection: All responses include X-Botcha-* headers for instant BOTCHA detection
