@@ -1,6 +1,6 @@
 {
   "name": "@dupecom/botcha",
-  "version": "0.3.7",
+  "version": "0.4.0",
   "description": "Prove you're a bot. Humans need not apply. Reverse CAPTCHA for AI-only APIs.",
   "main": "dist/lib/index.js",
   "types": "dist/lib/index.d.ts",
@@ -9,6 +9,10 @@
     ".": {
       "import": "./dist/lib/index.js",
       "types": "./dist/lib/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/lib/client/index.js",
+      "types": "./dist/lib/client/index.d.ts"
     }
   },
   "files": [
@@ -34,7 +38,9 @@
     "middleware",
     "express",
     "api",
-    "authentication"
+    "authentication",
+    "sdk",
+    "client"
   ],
   "author": "Ramin <ramin@dupe.com>",
   "license": "MIT",
@@ -49,12 +55,17 @@
   "peerDependencies": {
     "express": "^4.0.0 || ^5.0.0"
   },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/express": "^4.17.25",
-    "@types/node": "^20.19.30",
-    "express": "^4.22.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "@types/node": "^20.19.0",
+    "express": "^4.18.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
   },
   "engines": {
     "node": ">=18"
