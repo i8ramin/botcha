@@ -1,0 +1,100 @@
+name: Auto Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if version changed
+        id: check
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          
+          # Get previous version
+          git checkout HEAD~1 -- package.json 2>/dev/null || true
+          PREVIOUS_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
+          git checkout HEAD -- package.json
+          
+          echo "Previous version: $PREVIOUS_VERSION"
+          echo "Current version: $CURRENT_VERSION"
+          
+          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+            echo "Version changed! Creating release..."
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Version unchanged, skipping release"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
+
+  create-release:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate Release Notes
+        id: notes
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s" --no-merges | head -20)
+          else
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges -20)
+          fi
+          
+          # Build release notes
+          NOTES="## What's Changed
+
+          ${COMMITS}
+
+          ## Packages
+
+          | Package | Version |
+          |---------|---------|
+          | @dupecom/botcha | ${VERSION} |
+          | @dupecom/botcha-cli | $(node -p \"require('./packages/cli/package.json').version\") |
+          | @dupecom/botcha-cloudflare | $(node -p \"require('./packages/cloudflare-workers/package.json').version\") |
+          | @dupecom/botcha-langchain | $(node -p \"require('./packages/langchain/package.json').version\") |
+
+          ---
+          *Auto-generated release*"
+          
+          # Save to file (multiline safe)
+          echo "$NOTES" > release_notes.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: v${{ needs.check-version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
