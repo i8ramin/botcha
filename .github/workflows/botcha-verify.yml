@@ -167,7 +167,7 @@ A human would need to manually run \`echo -n "123456" | sha256sum\` five times a
           # Check if this comment contains a solution for our challenge
           if echo "$COMMENT_BODY" | grep -q "BOTCHA:$CHALLENGE_ID"; then
             # Extract the answers array
-            ANSWERS=$(echo "$COMMENT_BODY" | grep -oE '\["[a-f0-9]+",\s*"[a-f0-9]+",\s*"[a-f0-9]+",\s*"[a-f0-9]+",\s*"[a-f0-9]+"?\]' | head -1)
+            ANSWERS=$(echo "$COMMENT_BODY" | grep -oE '\["[a-f0-9]+",\s*"[a-f0-9]+",\s*"[a-f0-9]+",\s*"[a-f0-9]+",\s*"[a-f0-9]+"\]' | head -1)
             
             if [ -n "$ANSWERS" ]; then
               # Parse answers into comma-separated format for comparison
