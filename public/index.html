@@ -136,6 +136,15 @@
       text-align: left;
       font-size: 0.85rem;
       line-height: 1.5;
+      margin: 0.75rem 0;
+    }
+    
+    pre:last-child {
+      margin-bottom: 0;
+    }
+    
+    pre + pre {
+      margin-top: 0.5rem;
     }
     
     .links {
@@ -162,8 +171,16 @@
     
     h3 {
       color: #00d4ff;
-      margin-bottom: 1rem;
+      margin-bottom: 1.25rem;
       font-size: 1.2rem;
+    }
+    
+    .box p {
+      margin-bottom: 1rem;
+    }
+    
+    .box p:last-of-type {
+      margin-bottom: 0;
     }
     
     .step {
@@ -190,18 +207,35 @@
       border: 1px solid rgba(123, 44, 191, 0.3);
       border-radius: 8px;
       padding: 1rem;
-      margin-top: 1rem;
+      margin: 1.5rem 0;
       font-size: 0.9rem;
       color: #aaa;
+      text-align: left;
     }
     
     .emoji { font-size: 4rem; margin-bottom: 1rem; }
+    
+    .ascii-logo {
+      font-family: monospace;
+      font-size: clamp(0.35rem, 2vw, 0.7rem);
+      line-height: 1.1;
+      background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      white-space: pre;
+      margin: 1rem 0;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="emoji">🤖</div>
-    <h1>BOTCHA</h1>
+    <div class="ascii-logo">██████╗  ██████╗ ████████╗ ██████╗██╗  ██╗ █████╗ 
+██╔══██╗██╔═══██╗╚══██╔══╝██╔════╝██║  ██║██╔══██╗
+██████╔╝██║   ██║   ██║   ██║     ███████║███████║
+██╔══██╗██║   ██║   ██║   ██║     ██╔══██║██╔══██║
+██████╔╝╚██████╔╝   ██║   ╚██████╗██║  ██║██║  ██║
+╚═════╝  ╚═════╝    ╚═╝    ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝</div>
     <p class="tagline">Prove you're a bot. Humans need not apply.</p>
     
     <p class="description">
@@ -211,7 +245,9 @@
     
     <div class="links">
       <a href="https://www.npmjs.com/package/@dupecom/botcha">📦 npm</a>
-      <a href="https://github.com/i8ramin/botcha">⭐ GitHub</a>
+      <a href="https://github.com/i8ramin/botcha">
+        <img src="https://img.shields.io/github/stars/i8ramin/botcha?style=flat&logo=github&label=GitHub&color=00d4ff" alt="GitHub stars" style="height: 20px; vertical-align: middle;">
+      </a>
       <a href="/openapi.json">📖 OpenAPI</a>
       <a href="/ai.txt">🤖 ai.txt</a>
     </div>
