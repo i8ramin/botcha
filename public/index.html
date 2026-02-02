@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOTCHA - Prove You're a Bot</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    
+    .container {
+      max-width: 600px;
+      text-align: center;
+    }
+    
+    h1 {
+      font-size: 4rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .tagline {
+      font-size: 1.5rem;
+      color: #888;
+      margin-bottom: 2rem;
+    }
+    
+    .description {
+      font-size: 1.1rem;
+      line-height: 1.8;
+      color: #ccc;
+      margin-bottom: 3rem;
+    }
+    
+    .box {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin: 0.5rem;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      border: 2px solid #00d4ff;
+      color: #00d4ff;
+    }
+    
+    .result {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      border-radius: 8px;
+      display: none;
+    }
+    
+    .result.success {
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      display: block;
+    }
+    
+    .result.error {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid rgba(255, 0, 0, 0.3);
+      display: block;
+    }
+    
+    code {
+      background: rgba(0,0,0,0.3);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+    }
+    
+    .endpoints {
+      text-align: left;
+      margin-top: 1rem;
+    }
+    
+    .endpoints li {
+      margin: 0.5rem 0;
+      color: #aaa;
+    }
+    
+    .emoji { font-size: 4rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="emoji">🤖</div>
+    <h1>BOTCHA</h1>
+    <p class="tagline">Prove you're a bot. Humans need not apply.</p>
+    
+    <p class="description">
+      BOTCHA is a reverse CAPTCHA — it verifies that visitors are <strong>AI agents</strong>, 
+      not humans. Perfect for agent-only platforms, AI marketplaces, and bot networks.
+    </p>
+    
+    <div class="box">
+      <h3 style="margin-bottom: 1rem;">Try to Enter the Agent Zone</h3>
+      <p style="color: #888; margin-bottom: 1.5rem;">
+        Click below to access the protected endpoint. Humans will be blocked.
+      </p>
+      
+      <button class="btn btn-primary" onclick="tryAccess()">
+        🚪 Enter Agent-Only Zone
+      </button>
+      
+      <button class="btn btn-secondary" onclick="tryWithHeader()">
+        🤖 Enter as Agent (with header)
+      </button>
+      
+      <div id="result" class="result"></div>
+    </div>
+    
+    <div class="box">
+      <h3 style="margin-bottom: 1rem;">API Endpoints</h3>
+      <ul class="endpoints">
+        <li><code>GET /</code> — This page (public)</li>
+        <li><code>GET /api</code> — API info</li>
+        <li><code>GET /agent-only</code> — Protected endpoint</li>
+        <li><code>POST /challenge</code> — Get/solve a challenge</li>
+      </ul>
+    </div>
+    
+    <p style="color: #666; font-size: 0.9rem;">
+      Built by <a href="https://github.com/i8ramin" style="color: #00d4ff;">@i8ramin</a> 
+      and Choco 🐢
+    </p>
+  </div>
+  
+  <script>
+    async function tryAccess() {
+      const result = document.getElementById('result');
+      try {
+        const res = await fetch('/agent-only');
+        const data = await res.json();
+        
+        if (data.success) {
+          result.className = 'result success';
+          result.innerHTML = `✅ ${data.message}<br><small>Agent: ${data.agent}</small>`;
+        } else {
+          result.className = 'result error';
+          result.innerHTML = `🚫 ${data.message}<br><small>${data.hint || ''}</small>`;
+        }
+      } catch (e) {
+        result.className = 'result error';
+        result.innerHTML = '❌ Request failed';
+      }
+    }
+    
+    async function tryWithHeader() {
+      const result = document.getElementById('result');
+      try {
+        const res = await fetch('/agent-only', {
+          headers: {
+            'X-Agent-Identity': 'BrowserTestAgent/1.0'
+          }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          result.className = 'result success';
+          result.innerHTML = `✅ ${data.message}<br><small>Agent: ${data.agent}</small>`;
+        } else {
+          result.className = 'result error';
+          result.innerHTML = `🚫 ${data.message}`;
+        }
+      } catch (e) {
+        result.className = 'result error';
+        result.innerHTML = '❌ Request failed';
+      }
+    }
+  </script>
+</body>
+</html>
