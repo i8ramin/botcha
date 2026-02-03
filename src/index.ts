@@ -1,3 +1,4 @@
+// Local development server - Production runs on Cloudflare Workers
 import express, { Express } from 'express';
 import crypto from 'crypto';
 import path from 'path';
@@ -63,7 +64,7 @@ app.get('/api', (req, res) => {
       aiTxt: 'https://botcha.ai/ai.txt',
       robotsTxt: 'https://botcha.ai/robots.txt',
       npm: 'https://www.npmjs.com/package/@dupecom/botcha',
-      github: 'https://github.com/i8ramin/botcha',
+      github: 'https://github.com/dupe-com/botcha',
     },
   });
 });

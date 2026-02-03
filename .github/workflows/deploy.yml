@@ -1,13 +1,9 @@
-name: Deploy to Vercel
+name: Deploy to Cloudflare
 
 on:
   push:
     tags:
       - 'v*'
-
-env:
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
   deploy:
@@ -29,14 +25,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install
           
-      - name: Install Vercel CLI
-        run: pnpm add -g vercel
+      - name: Deploy Workers
+        run: pnpm wrangler deploy
+        working-directory: packages/cloudflare-workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         
-      - name: Pull Vercel Environment
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-        
-      - name: Build
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        
-      - name: Deploy to Production
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy Pages
+        run: pnpm wrangler pages deploy public --project-name=botcha
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}

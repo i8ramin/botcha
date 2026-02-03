@@ -241,7 +241,7 @@ MIT © [Ramin](https://github.com/i8ramin)
 
 ---
 
-Built by [@i8ramin](https://github.com/i8ramin) and Choco 🐢
+Built by [@i8ramin](https://dupe.com) and Choco 🐢
 
 ---
 

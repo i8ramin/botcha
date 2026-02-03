@@ -21,6 +21,7 @@ import {
 } from './challenges';
 import { generateToken, verifyToken, extractBearerToken } from './auth';
 import { checkRateLimit, getClientIP } from './rate-limit';
+import { verifyBadge, generateBadgeSvg, generateBadgeHtml } from './badge';
 
 // ============ TYPES ============
 type Bindings = {
@@ -119,6 +120,9 @@ app.get('/', (c) => {
       '/v1/token': 'Get challenge for JWT token flow (GET)',
       '/v1/token/verify': 'Verify challenge and get JWT (POST)',
       '/agent-only': 'Protected endpoint (requires JWT)',
+      '/badge/:id': 'Badge verification page (HTML)',
+      '/badge/:id/image': 'Badge image (SVG)',
+      '/api/badge/:id': 'Badge verification (JSON)',
     },
     rateLimit: {
       free: '100 challenges/hour/IP',
@@ -281,6 +285,134 @@ app.get('/agent-only', requireJWT, async (c) => {
   });
 });
 
+// ============ BADGE ENDPOINTS ============
+
+// Get badge verification page (HTML)
+app.get('/badge/:id', async (c) => {
+  const badgeId = c.req.param('id');
+  
+  if (!badgeId) {
+    return c.json({ error: 'Missing badge ID' }, 400);
+  }
+
+  const payload = await verifyBadge(badgeId, c.env.JWT_SECRET);
+  
+  if (!payload) {
+    return c.html(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invalid Badge - BOTCHA</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #e5e7eb;
+    }
+    .container { text-align: center; max-width: 500px; }
+    .icon { font-size: 64px; margin-bottom: 16px; }
+    .title { font-size: 28px; font-weight: bold; color: #ef4444; margin-bottom: 8px; }
+    .message { font-size: 16px; color: #9ca3af; margin-bottom: 24px; }
+    a { color: #3b82f6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">❌</div>
+    <h1 class="title">Invalid Badge</h1>
+    <p class="message">This badge is invalid or has been tampered with.</p>
+    <a href="https://botcha.ai">← Back to BOTCHA</a>
+  </div>
+</body>
+</html>`, 400);
+  }
+
+  const baseUrl = new URL(c.req.url).origin;
+  const html = generateBadgeHtml(payload, badgeId, baseUrl);
+  
+  return c.html(html);
+});
+
+// Get badge image (SVG)
+app.get('/badge/:id/image', async (c) => {
+  const badgeId = c.req.param('id');
+  
+  if (!badgeId) {
+    return c.text('Missing badge ID', 400);
+  }
+
+  const payload = await verifyBadge(badgeId, c.env.JWT_SECRET);
+  
+  if (!payload) {
+    // Return error SVG
+    const errorSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="120" viewBox="0 0 400 120">
+  <rect width="400" height="120" rx="12" fill="#1a1a2e"/>
+  <rect x="1" y="1" width="398" height="118" rx="11" fill="none" stroke="#ef4444" stroke-width="2"/>
+  <text x="200" y="60" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="#ef4444" text-anchor="middle">❌ INVALID BADGE</text>
+  <text x="200" y="85" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#6b7280" text-anchor="middle">Badge is invalid or tampered</text>
+</svg>`;
+    
+    return c.body(errorSvg, 400, {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=60',
+    });
+  }
+
+  const svg = generateBadgeSvg(payload);
+  
+  return c.body(svg, 200, {
+    'Content-Type': 'image/svg+xml',
+    'Cache-Control': 'public, max-age=3600',
+  });
+});
+
+// Get badge verification (JSON API)
+app.get('/api/badge/:id', async (c) => {
+  const badgeId = c.req.param('id');
+  
+  if (!badgeId) {
+    return c.json({ 
+      success: false,
+      error: 'Missing badge ID' 
+    }, 400);
+  }
+
+  const payload = await verifyBadge(badgeId, c.env.JWT_SECRET);
+  
+  if (!payload) {
+    return c.json({
+      success: false,
+      verified: false,
+      error: 'Invalid badge',
+      message: 'This badge is invalid or has been tampered with.',
+    }, 400);
+  }
+
+  const baseUrl = new URL(c.req.url).origin;
+
+  return c.json({
+    success: true,
+    verified: true,
+    badge: {
+      method: payload.method,
+      solveTimeMs: payload.solveTimeMs,
+      verifiedAt: new Date(payload.verifiedAt).toISOString(),
+    },
+    urls: {
+      verify: `${baseUrl}/badge/${badgeId}`,
+      image: `${baseUrl}/badge/${badgeId}/image`,
+    },
+  });
+});
+
 // ============ LEGACY ENDPOINTS (v0 - backward compatibility) ============
 
 app.get('/api/challenge', async (c) => {
@@ -389,3 +521,15 @@ export {
 
 export { generateToken, verifyToken } from './auth';
 export { checkRateLimit } from './rate-limit';
+export { 
+  generateBadge, 
+  verifyBadge, 
+  createBadgeResponse, 
+  generateBadgeSvg, 
+  generateBadgeHtml,
+  generateShareText,
+  type BadgeMethod,
+  type BadgePayload,
+  type Badge,
+  type ShareFormats,
+} from './badge';

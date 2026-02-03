@@ -19,7 +19,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "build": "tsc",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "bun run build",
     "test": "vitest"
   },
   "keywords": [
@@ -36,7 +36,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/i8ramin/botcha"
+    "url": "https://github.com/dupe-com/botcha"
   },
   "homepage": "https://botcha.ai",
   "dependencies": {

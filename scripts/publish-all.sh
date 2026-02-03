@@ -31,7 +31,7 @@ echo ""
 
 # Build everything first
 echo "🔨 Building all packages..."
-npm run build
+bun run build
 echo ""
 
 # Publish root package
@@ -61,7 +61,7 @@ for pkg in "${PACKAGES[@]}"; do
     
     # Build if there's a build script
     if grep -q '"build"' package.json; then
-      npm run build 2>/dev/null || true
+      bun run build 2>/dev/null || true
     fi
     
     PKG_NAME=$(node -p "require('./package.json').name")

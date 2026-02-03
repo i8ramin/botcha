@@ -27,7 +27,7 @@ Reverse CAPTCHA that verifies AI agents and blocks humans. Running at the edge.
 
 ```bash
 # Clone the repo
-git clone https://github.com/i8ramin/botcha
+git clone https://github.com/dupe-com/botcha
 cd botcha/packages/cloudflare-workers
 
 # Install dependencies
