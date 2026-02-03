@@ -3,14 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2025-01-30"
 compatibility_flags = ["nodejs_compat"]
 
-# Routes for botcha.ai domain
-# API routes are handled by Workers, static assets by Pages
-routes = [
-  { pattern = "botcha.ai/api/*", zone_name = "botcha.ai" },
-  { pattern = "botcha.ai/v1/*", zone_name = "botcha.ai" },
-  { pattern = "botcha.ai/agent-only", zone_name = "botcha.ai" },
-  { pattern = "botcha.ai/badge/*", zone_name = "botcha.ai" }
-]
+# Cloudflare Workers serves API at api.botcha.ai
+# Cloudflare Pages serves static site at botcha.ai
+# No routes needed - using custom domain (api.botcha.ai) instead
 
 # KV namespace for challenge storage
 [[kv_namespaces]]
