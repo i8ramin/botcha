@@ -48,13 +48,59 @@ fetch('https://api.example.com/agent-only', {
 });
 ```
 
-**Future:** Monetization (Free tier → Paid tiers)
+**Future improvements:**
+- Multi-region deployment for lower latency
+- Custom token expiry settings
+
+**Monetization path:**
+
+Now that the hosted service is live, time to make it sustainable! 💰
+
+Implementation tasks:
+1. **API Key Management** (foundation layer)
+   - Generate unique API keys per account
+   - Revoke/rotate keys on demand
+   - Secure storage in Cloudflare KV
+   - *Blocks: everything else*
+
+2. **Usage Tracking & Metering** (prerequisite for billing)
+   - Track requests per API key
+   - Store usage data (Cloudflare Analytics Engine or D1)
+   - Calculate quotas (requests/month or requests/day)
+   - *Blocks: tier enforcement, billing*
+
+3. **Tier Enforcement** (the gatekeeper)
+   - Check quota before serving request
+   - Return 429 when quota exceeded
+   - Graceful messaging: "Upgrade to continue"
+   - Free tier: 1,000 requests/month
+   - Paid tiers: 10k, 100k, unlimited
+
+4. **Stripe Integration** (ca-ching! 💵)
+   - Subscribe to tier (webhook → update account)
+   - Handle payment failures
+   - Prorated upgrades/downgrades
+   - *Requires: usage tracking for billing sync*
+
+5. **Dashboard for Usage Monitoring** (ties into #3 Dashboard/Analytics)
+   - Real-time usage stats per account
+   - Quota remaining visualization
+   - Billing history
+   - Upgrade prompts when nearing limit
+
+6. **Account Management** (user-facing flows)
+   - Sign up flow (email + password or OAuth)
+   - API key display & regeneration
+   - Tier selection & checkout
+   - Billing info updates
 
 ### 3. Dashboard / Analytics
 - How many agents verified vs blocked
 - Challenge solve times distribution
 - Top user agents
 - Geographic distribution
+
+**Note:** This ties into monetization — users need to see their usage/quota (see #2 Monetization section)
 
 ---
 
