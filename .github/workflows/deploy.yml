@@ -38,6 +38,8 @@ jobs:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           workingDirectory: packages/cloudflare-workers
           command: deploy
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           
       - name: Comment deployment status
         if: github.event_name == 'push'
