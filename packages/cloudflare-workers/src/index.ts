@@ -25,7 +25,7 @@ import {
 } from './challenges';
 import { generateToken, verifyToken, extractBearerToken } from './auth';
 import { checkRateLimit, getClientIP } from './rate-limit';
-import { verifyBadge, generateBadgeSvg, generateBadgeHtml } from './badge';
+import { verifyBadge, generateBadgeSvg, generateBadgeHtml, createBadgeResponse } from './badge';
 
 // ============ TYPES ============
 type Bindings = {
@@ -361,17 +361,28 @@ app.post('/v1/hybrid', async (c) => {
 
   const result = await verifyHybridChallenge(id, speed_answers, reasoning_answers, c.env.CHALLENGES);
 
+  if (result.valid) {
+    const baseUrl = new URL(c.req.url).origin;
+    const badge = await createBadgeResponse('hybrid-challenge', c.env.JWT_SECRET, baseUrl, result.speed.solveTimeMs);
+
+    return c.json({
+      success: true,
+      message: `🔥 HYBRID TEST PASSED! Speed: ${result.speed.solveTimeMs}ms, Reasoning: ${result.reasoning.score}`,
+      speed: result.speed,
+      reasoning: result.reasoning,
+      totalTimeMs: result.totalTimeMs,
+      verdict: '🤖 VERIFIED AI AGENT (speed + reasoning confirmed)',
+      badge,
+    });
+  }
+
   return c.json({
-    success: result.valid,
-    message: result.valid
-      ? `🔥 HYBRID TEST PASSED! Speed: ${result.speed.solveTimeMs}ms, Reasoning: ${result.reasoning.score}`
-      : `❌ ${result.reason}`,
+    success: false,
+    message: `❌ Failed: ${result.reason}`,
     speed: result.speed,
     reasoning: result.reasoning,
     totalTimeMs: result.totalTimeMs,
-    verdict: result.valid
-      ? '🤖 VERIFIED AI AGENT (speed + reasoning confirmed)'
-      : '🚫 FAILED HYBRID TEST',
+    verdict: '🚫 FAILED HYBRID TEST',
   });
 });
 
@@ -413,17 +424,28 @@ app.post('/api/hybrid-challenge', async (c) => {
 
   const result = await verifyHybridChallenge(id, speed_answers, reasoning_answers, c.env.CHALLENGES);
 
+  if (result.valid) {
+    const baseUrl = new URL(c.req.url).origin;
+    const badge = await createBadgeResponse('hybrid-challenge', c.env.JWT_SECRET, baseUrl, result.speed.solveTimeMs);
+
+    return c.json({
+      success: true,
+      message: `🔥 HYBRID TEST PASSED! Speed: ${result.speed.solveTimeMs}ms, Reasoning: ${result.reasoning.score}`,
+      speed: result.speed,
+      reasoning: result.reasoning,
+      totalTimeMs: result.totalTimeMs,
+      verdict: '🤖 VERIFIED AI AGENT (speed + reasoning confirmed)',
+      badge,
+    });
+  }
+
   return c.json({
-    success: result.valid,
-    message: result.valid
-      ? `🔥 HYBRID TEST PASSED! Speed: ${result.speed.solveTimeMs}ms, Reasoning: ${result.reasoning.score}`
-      : `❌ ${result.reason}`,
+    success: false,
+    message: `❌ Failed: ${result.reason}`,
     speed: result.speed,
     reasoning: result.reasoning,
     totalTimeMs: result.totalTimeMs,
-    verdict: result.valid
-      ? '🤖 VERIFIED AI AGENT (speed + reasoning confirmed)'
-      : '🚫 FAILED HYBRID TEST',
+    verdict: '🚫 FAILED HYBRID TEST',
   });
 });
 
