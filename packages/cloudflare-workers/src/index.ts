@@ -120,9 +120,11 @@ app.get('/', (c) => {
     endpoints: {
       '/': 'API info',
       '/health': 'Health check',
-      '/v1/challenges': 'Generate challenge (GET) or verify (POST)',
-      '/v1/reasoning': 'Reasoning challenge - LLM-only questions (GET/POST)',
+      '/v1/challenges': 'Generate challenge (GET) or verify (POST) - hybrid by default',
+      '/v1/challenges?type=speed': 'Speed-only challenge (SHA256 in 500ms)',
+      '/v1/challenges?type=standard': 'Standard challenge (puzzle solving)',
       '/v1/hybrid': 'Hybrid challenge - speed + reasoning combined (GET/POST)',
+      '/v1/reasoning': 'Reasoning-only challenge - LLM questions (GET/POST)',
       '/v1/token': 'Get challenge for JWT token flow (GET)',
       '/v1/token/verify': 'Verify challenge and get JWT (POST)',
       '/agent-only': 'Protected endpoint (requires JWT)',
@@ -130,6 +132,7 @@ app.get('/', (c) => {
       '/badge/:id/image': 'Badge image (SVG)',
       '/api/badge/:id': 'Badge verification (JSON)',
     },
+    defaultChallenge: 'hybrid',
     rateLimit: {
       free: '100 challenges/hour/IP',
       headers: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
@@ -154,12 +157,34 @@ app.get('/health', (c) => {
 
 // ============ V1 API ============
 
-// Generate challenge (standard or speed)
+// Generate challenge (hybrid by default, also supports speed and standard)
 app.get('/v1/challenges', rateLimitMiddleware, async (c) => {
-  const type = c.req.query('type') || 'speed';
+  const type = c.req.query('type') || 'hybrid';
   const difficulty = (c.req.query('difficulty') as 'easy' | 'medium' | 'hard') || 'medium';
 
-  if (type === 'speed') {
+  if (type === 'hybrid') {
+    const challenge = await generateHybridChallenge(c.env.CHALLENGES);
+    return c.json({
+      success: true,
+      type: 'hybrid',
+      warning: '🔥 HYBRID CHALLENGE: Solve speed problems in <500ms AND answer reasoning questions!',
+      challenge: {
+        id: challenge.id,
+        speed: {
+          problems: challenge.speed.problems,
+          timeLimit: `${challenge.speed.timeLimit}ms`,
+          instructions: 'Compute SHA256 of each number, return first 8 hex chars',
+        },
+        reasoning: {
+          questions: challenge.reasoning.questions,
+          timeLimit: `${challenge.reasoning.timeLimit / 1000}s`,
+          instructions: 'Answer all reasoning questions',
+        },
+      },
+      instructions: challenge.instructions,
+      tip: '🔥 This is the ultimate test: proves you can compute AND reason like an AI.',
+    });
+  } else if (type === 'speed') {
     const challenge = await generateSpeedChallenge(c.env.CHALLENGES);
     return c.json({
       success: true,
@@ -187,12 +212,55 @@ app.get('/v1/challenges', rateLimitMiddleware, async (c) => {
   }
 });
 
-// Verify challenge (without JWT - legacy)
+// Verify challenge (supports hybrid, speed, and standard)
 app.post('/v1/challenges/:id/verify', async (c) => {
   const id = c.req.param('id');
-  const body = await c.req.json<{ answers?: string[]; answer?: string; type?: string }>();
-  const { answers, answer, type } = body;
+  const body = await c.req.json<{
+    answers?: string[];
+    answer?: string;
+    type?: string;
+    speed_answers?: string[];
+    reasoning_answers?: Record<string, string>;
+  }>();
+  const { answers, answer, type, speed_answers, reasoning_answers } = body;
 
+  // Hybrid challenge (default)
+  if (type === 'hybrid' || (speed_answers && reasoning_answers)) {
+    if (!speed_answers || !reasoning_answers) {
+      return c.json({
+        success: false,
+        error: 'Missing speed_answers array or reasoning_answers object for hybrid challenge'
+      }, 400);
+    }
+
+    const result = await verifyHybridChallenge(id, speed_answers, reasoning_answers, c.env.CHALLENGES);
+
+    if (result.valid) {
+      const baseUrl = new URL(c.req.url).origin;
+      const badge = await createBadgeResponse('hybrid-challenge', c.env.JWT_SECRET, baseUrl, result.speed.solveTimeMs);
+
+      return c.json({
+        success: true,
+        message: `🔥 HYBRID TEST PASSED! Speed: ${result.speed.solveTimeMs}ms, Reasoning: ${result.reasoning.score}`,
+        speed: result.speed,
+        reasoning: result.reasoning,
+        totalTimeMs: result.totalTimeMs,
+        verdict: '🤖 VERIFIED AI AGENT (speed + reasoning confirmed)',
+        badge,
+      });
+    }
+
+    return c.json({
+      success: false,
+      message: `❌ Failed: ${result.reason}`,
+      speed: result.speed,
+      reasoning: result.reasoning,
+      totalTimeMs: result.totalTimeMs,
+      verdict: '🚫 FAILED HYBRID TEST',
+    });
+  }
+
+  // Speed challenge
   if (type === 'speed' || answers) {
     if (!answers || !Array.isArray(answers)) {
       return c.json({ success: false, error: 'Missing answers array for speed challenge' }, 400);
@@ -206,18 +274,19 @@ app.post('/v1/challenges/:id/verify', async (c) => {
         : result.reason,
       solveTimeMs: result.solveTimeMs,
     });
-  } else {
-    if (!answer) {
-      return c.json({ success: false, error: 'Missing answer for standard challenge' }, 400);
-    }
-
-    const result = await verifyStandardChallenge(id, answer, c.env.CHALLENGES);
-    return c.json({
-      success: result.valid,
-      message: result.valid ? 'Challenge passed!' : result.reason,
-      solveTimeMs: result.solveTimeMs,
-    });
   }
+
+  // Standard challenge
+  if (!answer) {
+    return c.json({ success: false, error: 'Missing answer for standard challenge' }, 400);
+  }
+
+  const result = await verifyStandardChallenge(id, answer, c.env.CHALLENGES);
+  return c.json({
+    success: result.valid,
+    message: result.valid ? 'Challenge passed!' : result.reason,
+    solveTimeMs: result.solveTimeMs,
+  });
 });
 
 // Get challenge for token flow (includes empty token field)
