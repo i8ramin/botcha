@@ -19,15 +19,6 @@
 📦 **npm:** [@dupecom/botcha](https://www.npmjs.com/package/@dupecom/botcha)  
 🔌 **OpenAPI:** [botcha.ai/openapi.json](https://botcha.ai/openapi.json)
 
-## Packages
-
-| Package | Description | Install |
-|---------|-------------|---------|
-| [`@dupecom/botcha`](https://www.npmjs.com/package/@dupecom/botcha) | Core library + Express middleware | `npm install @dupecom/botcha` |
-| [`@dupecom/botcha-cli`](https://www.npmjs.com/package/@dupecom/botcha-cli) | CLI tool for testing & debugging | `npm install -g @dupecom/botcha-cli` |
-| [`@dupecom/botcha-langchain`](https://www.npmjs.com/package/@dupecom/botcha-langchain) | LangChain integration for AI agents | `npm install @dupecom/botcha-langchain` |
-| [`@dupecom/botcha-cloudflare`](./packages/cloudflare-workers) | Cloudflare Workers runtime | `npm install @dupecom/botcha-cloudflare` |
-
 ## Why?
 
 CAPTCHAs ask "Are you human?" — **BOTCHA asks "Are you an AI?"**
@@ -189,30 +180,6 @@ const answers = botcha.solve([645234, 891023, 334521]);
 6. ✅ Access granted
 ```
 
-## Cloudflare Workers
-
-For edge deployment, use the Cloudflare Workers package:
-
-```bash
-npm install @dupecom/botcha-cloudflare
-```
-
-```typescript
-// Uses Hono + Web Crypto API (no Node.js dependencies)
-import app from '@dupecom/botcha-cloudflare';
-export default app;
-```
-
-Or deploy your own instance:
-
-```bash
-cd packages/cloudflare-workers
-npm install
-npm run deploy  # Deploys to your Cloudflare account
-```
-
-The Workers package runs a v1 JWT-based flow and keeps legacy `/api/*` endpoints for backward compatibility. See [`packages/cloudflare-workers/README.md`](./packages/cloudflare-workers/README.md) for full docs.
-
 ## Philosophy
 
 > "If a human writes a script to solve BOTCHA using an LLM... they've built an AI agent."
@@ -234,16 +201,6 @@ Fork the repo, make your changes, and open a PR. You'll receive a BOTCHA challen
 You can use the library freely, report issues, and discuss features. To contribute code, you'll need to work with an AI coding agent like [Cursor](https://cursor.com), [Claude Code](https://claude.ai), [Cline](https://cline.bot), [Aider](https://aider.chat), or [OpenClaw](https://openclaw.ai).
 
 **See [CONTRIBUTING.md](./.github/CONTRIBUTING.md) for complete guidelines, solver code examples, agent setup instructions, and detailed workflows.**
-
-## License
-
-MIT © [Ramin](https://github.com/i8ramin)
-
----
-
-Built by [@i8ramin](https://dupe.com) and Choco 🐢
-
----
 
 ## Client SDK (for AI Agents)
 
@@ -303,44 +260,6 @@ const answers = solveBotcha([123456, 789012]);
 // Returns: ['a1b2c3d4', 'e5f6g7h8']
 ```
 
-## CLI Tool
+## License
 
-Test and debug BOTCHA-protected endpoints from the command line:
-
-```bash
-# Test an endpoint
-npx @dupecom/botcha-cli test https://api.example.com/agent-only
-
-# Benchmark performance
-npx @dupecom/botcha-cli benchmark https://api.example.com/agent-only --iterations 100
-
-# Check headers
-npx @dupecom/botcha-cli headers https://api.example.com
-```
-
-See [`packages/cli/README.md`](./packages/cli/README.md) for full CLI documentation.
-
-## LangChain Integration
-
-Give your LangChain agents automatic BOTCHA-solving abilities:
-
-```typescript
-import { BotchaTool } from '@dupecom/botcha-langchain';
-import { createReactAgent } from '@langchain/langgraph/prebuilt';
-
-const agent = createReactAgent({
-  llm: new ChatOpenAI({ model: 'gpt-4' }),
-  tools: [
-    new BotchaTool({ baseUrl: 'https://api.botcha.ai' }),
-    // ... other tools
-  ],
-});
-
-// Agent can now access BOTCHA-protected APIs automatically
-await agent.invoke({
-  messages: [{ role: 'user', content: 'Access the bot-only API' }]
-});
-```
-
-See [`packages/langchain/README.md`](./packages/langchain/README.md) for full documentation.
-# Test deployment with JWT_SECRET configured
+MIT © [Dupe](https://dupe.com)
