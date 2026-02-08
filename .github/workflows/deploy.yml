@@ -17,15 +17,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '18'
+          bun-version: latest
           
       - name: Install dependencies
         run: |
           cd packages/cloudflare-workers
-          npm install
+          bun install
+          
+      - name: Build TypeScript
+        run: |
+          cd packages/cloudflare-workers
+          bun run build
           
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
