@@ -176,3 +176,4 @@ npm run dev
 ## License
 
 MIT
+# Deployment test with JWT_SECRET
