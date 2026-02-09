@@ -212,19 +212,23 @@ app.post('/v1/challenge/stream/:session', async (c: Context<{ Bindings: Bindings
     }
 
     // Update session
+    const timerStart = Date.now();
     session.status = 'challenged';
     session.problems = problems;
     session.expectedAnswers = expectedAnswers;
-    session.timerStart = Date.now();
+    session.timerStart = timerStart;
+    
+    // Store session
     await storeSession(c.env.CHALLENGES, session);
 
-    // Return challenge event
+    // Return challenge event with timer start for client to track
     return c.json({
       success: true,
       event: 'challenge',
       data: {
         problems,
         timeLimit: 500,
+        timerStart, // Include so client can verify timing
         instructions: 'Compute SHA256 of each number, return first 8 hex chars',
       },
     });
@@ -232,11 +236,20 @@ app.post('/v1/challenge/stream/:session', async (c: Context<{ Bindings: Bindings
 
   // Handle "solve" action - verify answers
   if (action === 'solve') {
+    // Handle KV eventual consistency - retry once if still in 'ready' state
+    if (session.status === 'ready') {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const retrySession = await getSession(c.env.CHALLENGES, sessionId);
+      if (retrySession && retrySession.status === 'challenged') {
+        Object.assign(session, retrySession);
+      }
+    }
+    
     if (session.status !== 'challenged') {
       return c.json({
         success: false,
         error: 'INVALID_STATE',
-        message: `Session is in ${session.status} state, expected challenged`,
+        message: `Session is in ${session.status} state, expected challenged. Try sending GO first.`,
       }, 400);
     }
 
