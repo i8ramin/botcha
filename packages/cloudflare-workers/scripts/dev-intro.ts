@@ -22,7 +22,7 @@ const intro = `
 ║  Prove you're a bot. Humans need not apply.                  ║
 ║                                                              ║
 ╠══════════════════════════════════════════════════════════════╣
-║  Server: http://${HOST}:${PORT}                                ║
+║  Server: http://${HOST}:${PORT}                               ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
 ║  CHALLENGES                                                  ║
