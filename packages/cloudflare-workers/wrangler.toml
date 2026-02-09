@@ -29,6 +29,10 @@ id = "1bbfbe23060a450f996a587a36501a65"
 binding = "RATE_LIMITS"
 id = "c45e9f02ad104ad98d00699db3ad258c"
 
+# Analytics Engine binding for usage tracking
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+
 # Local development settings (must be last to avoid capturing other fields)
 [dev]
 port = 8787

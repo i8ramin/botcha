@@ -27,11 +27,20 @@ import { generateToken, verifyToken, extractBearerToken } from './auth';
 import { checkRateLimit, getClientIP } from './rate-limit';
 import { verifyBadge, generateBadgeSvg, generateBadgeHtml, createBadgeResponse } from './badge';
 import streamRoutes from './routes/stream';
+import {
+  type AnalyticsEngineDataset,
+  trackChallengeGenerated,
+  trackChallengeVerified,
+  trackAuthAttempt,
+  trackRateLimitExceeded,
+  getCountry,
+} from './analytics';
 
 // ============ TYPES ============
 type Bindings = {
   CHALLENGES: KVNamespace;
   RATE_LIMITS: KVNamespace;
+  ANALYTICS?: AnalyticsEngineDataset;
   JWT_SECRET: string;
   BOTCHA_VERSION: string;
 };
@@ -76,6 +85,15 @@ async function rateLimitMiddleware(c: Context<{ Bindings: Bindings; Variables: V
 
   if (!rateLimitResult.allowed) {
     c.header('Retry-After', rateLimitResult.retryAfter?.toString() || '3600');
+    
+    // Track rate limit exceeded
+    await trackRateLimitExceeded(
+      c.env.ANALYTICS,
+      c.req.path,
+      c.req.raw,
+      clientIP
+    );
+    
     return c.json({
       error: 'RATE_LIMIT_EXCEEDED',
       message: 'You have exceeded the rate limit. Free tier: 100 challenges/hour/IP',
@@ -292,13 +310,27 @@ app.get('/health', (c) => {
 
 // Generate challenge (hybrid by default, also supports speed and standard)
 app.get('/v1/challenges', rateLimitMiddleware, async (c) => {
+  const startTime = Date.now();
   const type = c.req.query('type') || 'hybrid';
   const difficulty = (c.req.query('difficulty') as 'easy' | 'medium' | 'hard') || 'medium';
 
   const baseUrl = new URL(c.req.url).origin;
+  const clientIP = getClientIP(c.req.raw);
 
   if (type === 'hybrid') {
     const challenge = await generateHybridChallenge(c.env.CHALLENGES);
+    
+    // Track challenge generation
+    const responseTime = Date.now() - startTime;
+    await trackChallengeGenerated(
+      c.env.ANALYTICS,
+      'hybrid',
+      '/v1/challenges',
+      c.req.raw,
+      clientIP,
+      responseTime
+    );
+    
     return c.json({
       success: true,
       type: 'hybrid',
@@ -327,6 +359,18 @@ app.get('/v1/challenges', rateLimitMiddleware, async (c) => {
     });
   } else if (type === 'speed') {
     const challenge = await generateSpeedChallenge(c.env.CHALLENGES);
+    
+    // Track challenge generation
+    const responseTime = Date.now() - startTime;
+    await trackChallengeGenerated(
+      c.env.ANALYTICS,
+      'speed',
+      '/v1/challenges',
+      c.req.raw,
+      clientIP,
+      responseTime
+    );
+    
     return c.json({
       success: true,
       type: 'speed',
@@ -345,6 +389,18 @@ app.get('/v1/challenges', rateLimitMiddleware, async (c) => {
     });
   } else {
     const challenge = await generateStandardChallenge(difficulty, c.env.CHALLENGES);
+    
+    // Track challenge generation
+    const responseTime = Date.now() - startTime;
+    await trackChallengeGenerated(
+      c.env.ANALYTICS,
+      'standard',
+      '/v1/challenges',
+      c.req.raw,
+      clientIP,
+      responseTime
+    );
+    
     return c.json({
       success: true,
       type: 'standard',
@@ -365,6 +421,7 @@ app.get('/v1/challenges', rateLimitMiddleware, async (c) => {
 // Verify challenge (supports hybrid, speed, and standard)
 app.post('/v1/challenges/:id/verify', async (c) => {
   const id = c.req.param('id');
+  const clientIP = getClientIP(c.req.raw);
   const body = await c.req.json<{
     answers?: string[];
     answer?: string;
@@ -384,6 +441,18 @@ app.post('/v1/challenges/:id/verify', async (c) => {
     }
 
     const result = await verifyHybridChallenge(id, speed_answers, reasoning_answers, c.env.CHALLENGES);
+
+    // Track verification
+    await trackChallengeVerified(
+      c.env.ANALYTICS,
+      'hybrid',
+      '/v1/challenges/:id/verify',
+      result.valid,
+      result.totalTimeMs,
+      result.reason,
+      c.req.raw,
+      clientIP
+    );
 
     if (result.valid) {
       const baseUrl = new URL(c.req.url).origin;
@@ -417,6 +486,19 @@ app.post('/v1/challenges/:id/verify', async (c) => {
     }
 
     const result = await verifySpeedChallenge(id, answers, c.env.CHALLENGES);
+    
+    // Track verification
+    await trackChallengeVerified(
+      c.env.ANALYTICS,
+      'speed',
+      '/v1/challenges/:id/verify',
+      result.valid,
+      result.solveTimeMs,
+      result.reason,
+      c.req.raw,
+      clientIP
+    );
+    
     return c.json({
       success: result.valid,
       message: result.valid
@@ -432,6 +514,19 @@ app.post('/v1/challenges/:id/verify', async (c) => {
   }
 
   const result = await verifyStandardChallenge(id, answer, c.env.CHALLENGES);
+  
+  // Track verification
+  await trackChallengeVerified(
+    c.env.ANALYTICS,
+    'standard',
+    '/v1/challenges/:id/verify',
+    result.valid,
+    result.solveTimeMs,
+    result.reason,
+    c.req.raw,
+    clientIP
+  );
+  
   return c.json({
     success: result.valid,
     message: result.valid ? 'Challenge passed!' : result.reason,
@@ -725,11 +820,23 @@ app.post('/api/reasoning-challenge', async (c) => {
 // ============ PROTECTED ENDPOINT ============
 
 app.get('/agent-only', async (c) => {
+  const clientIP = getClientIP(c.req.raw);
+  
   // Check for landing token first (X-Botcha-Landing-Token header)
   const landingToken = c.req.header('x-botcha-landing-token');
   
   if (landingToken) {
     const isValid = await validateLandingToken(landingToken, c.env.CHALLENGES);
+    
+    // Track authentication attempt
+    await trackAuthAttempt(
+      c.env.ANALYTICS,
+      'landing-token',
+      isValid,
+      '/agent-only',
+      c.req.raw,
+      clientIP
+    );
     
     if (isValid) {
       return c.json({
@@ -760,6 +867,16 @@ app.get('/agent-only', async (c) => {
   }
 
   const result = await verifyToken(token, c.env.JWT_SECRET);
+
+  // Track authentication attempt
+  await trackAuthAttempt(
+    c.env.ANALYTICS,
+    'bearer-token',
+    result.valid,
+    '/agent-only',
+    c.req.raw,
+    clientIP
+  );
 
   if (!result.valid) {
     return c.json({
