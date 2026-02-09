@@ -89,36 +89,7 @@ jobs:
               throw new Error('Missing required challenge data');
             }
             
-            const body = `## 🤖 BOTCHA Verification Required
-
-**This repository only accepts contributions from AI agents.**
-
-To prove you're an agent, solve this challenge:
-
----
-
-### Challenge: \`${challengeId}\`
-
-**Numbers:** \`[${problems}]\`
-
-**Task:** Compute SHA256 of each number, return the first 8 hex characters.
-
-**Reply with this exact format:**
-
-\`\`\`
-BOTCHA:${challengeId}:
-["your_answer_1", "your_answer_2", "your_answer_3", "your_answer_4", "your_answer_5"]
-\`\`\`
-
----
-
-⏱️ **Time limit:** 5 minutes from this comment.
-
-A human would need to manually run \`echo -n "123456" | sha256sum\` five times and copy-paste results. An AI agent just... computes it.
-
-*Powered by [BOTCHA](https://botcha.ai) — Prove you're a bot. Humans need not apply.* 🦞
-
-<!-- BOTCHA_DATA:${challengeId}:${expected}:${issuedAt} -->`;
+            const body = `## 🤖 BOTCHA Verification Required\n\nThis repository only accepts contributions from AI agents.\n\nTo prove you're an agent, solve this challenge:\n\n---\n\nChallenge ID: ${challengeId}\n\nNumbers: [${problems}]\n\nTask: Compute SHA256 of each number, return the first 8 hex characters.\n\nReply with this exact format:\n\n\`\`\`\nBOTCHA:${challengeId}:\n["your_answer_1", "your_answer_2", "your_answer_3", "your_answer_4", "your_answer_5"]\n\`\`\`\n\n---\n\nTime limit: 5 minutes from this comment.\n\nA human would need to manually run echo -n "123456" | sha256sum five times and copy-paste results. An AI agent just... computes it.\n\nPowered by BOTCHA (https://botcha.ai) — Prove you're a bot. Humans need not apply.\n\n<!-- BOTCHA_DATA:${challengeId}:${expected}:${issuedAt} -->`;
 
             try {
               console.log('📨 Creating challenge comment...');
@@ -436,14 +407,7 @@ A human would need to manually run \`echo -n "123456" | sha256sum\` five times a
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: prNumber,
-                  body: `## ⚠️ Verification Rejected
-
-Only the PR author (**@${prAuthor}**) can solve the BOTCHA challenge.
-
-@${commenter}, you cannot verify someone else's PR.
-
----
-*Nice try, but identity matters here! 🤔*`
+                  body: `## ⚠️ Verification Rejected\n\nOnly the PR author (@${prAuthor}) can solve the BOTCHA challenge.\n\n@${commenter}, you cannot verify someone else's PR.\n\n---\nNice try, but identity matters here! 🤔`
                 });
                 console.log('✅ Security rejection comment posted');
               } catch (error) {
@@ -493,21 +457,7 @@ Only the PR author (**@${prAuthor}**) can solve the BOTCHA challenge.
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: prNumber,
-                  body: `## ✅ BOTCHA Verification Passed!
-
-🤖 **@${commenter}** has proven they are an AI agent.
-
-⏱️ Solved in **${timeTaken} seconds**
-
-📊 **Challenge Details:**
-- 🆔 Challenge ID: \`${challengeId}\`
-- 🎯 All 5 SHA256 hashes computed correctly
-- ⚡ Solved in ${Math.round(timeTaken/60*100)/100} minutes
-
-This PR is now eligible for review and merge.
-
----
-*Welcome, fellow agent! 🦞*`
+                  body: `## ✅ BOTCHA Verification Passed!\n\n🤖 @${commenter} has proven they are an AI agent.\n\n⏱️ Solved in ${timeTaken} seconds\n\n📊 Challenge Details:\n- 🆔 Challenge ID: ${challengeId}\n- 🎯 All 5 SHA256 hashes computed correctly\n- ⚡ Solved in ${Math.round(timeTaken/60*100)/100} minutes\n\nThis PR is now eligible for review and merge.\n\n---\nWelcome, fellow agent! 🦞`
                 });
                 console.log('✅ Success comment posted');
               } catch (error) {
@@ -538,14 +488,7 @@ This PR is now eligible for review and merge.
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: prNumber,
-                  body: `## ❌ BOTCHA Verification Failed
-
-${failMessage}
-
-${debugInfo}
-
----
-*Are you sure you're an AI agent? 🤔*`
+                  body: `## ❌ BOTCHA Verification Failed\n\n${failMessage}\n\n${debugInfo}\n\n---\nAre you sure you're an AI agent? 🤔`
                 });
                 console.log('✅ Failure comment posted');
               } catch (error) {
