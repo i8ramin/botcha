@@ -101,39 +101,8 @@ PUBLISH_OUTPUT=$(npm publish $DRY_RUN --access public 2>&1) && {
 }
 echo ""
 
-# Publish sub-packages
-PACKAGES=("cli" "cloudflare-workers" "langchain")
-
-for pkg in "${PACKAGES[@]}"; do
-  PKG_PATH="packages/$pkg"
-  if [ -d "$PKG_PATH" ]; then
-    echo -e "${BLUE}Publishing @dupecom/botcha-$pkg...${NC}"
-    cd "$PKG_PATH"
-    
-    # Build if there's a build script
-    if grep -q '"build"' package.json; then
-      bun run build 2>/dev/null || true
-    fi
-    
-    PKG_NAME=$(node -p "require('./package.json').name")
-    PKG_VERSION=$(node -p "require('./package.json').version")
-    
-    PUBLISH_OUTPUT=$(npm publish $DRY_RUN --access public 2>&1) && {
-      echo -e "${GREEN}✓ $PKG_NAME@$PKG_VERSION published${NC}"
-    } || {
-      if echo "$PUBLISH_OUTPUT" | grep -qi "cannot publish over the previously published"; then
-        echo -e "${YELLOW}⏭ $PKG_NAME@$PKG_VERSION already published, skipping${NC}"
-      else
-        echo "$PUBLISH_OUTPUT"
-        echo "❌ Failed to publish $PKG_NAME"
-        cd "$PROJECT_ROOT"
-        exit 1
-      fi
-    }
-    cd "$PROJECT_ROOT"
-    echo ""
-  fi
-done
+# Note: Sub-packages (cli, cloudflare-workers, langchain) have been deprecated
+# and are no longer published. Only @dupecom/botcha is maintained.
 
 echo "=========================="
 echo "🎉 All packages published!"
