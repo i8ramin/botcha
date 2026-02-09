@@ -115,44 +115,171 @@ async function requireJWT(c: Context<{ Bindings: Bindings; Variables: Variables 
 
 // ============ ROOT & INFO ============
 
+// Detect if request is from a bot/agent vs human browser
+function isBot(c: Context<{ Bindings: Bindings; Variables: Variables }>): boolean {
+  const accept = c.req.header('accept') || '';
+  const userAgent = c.req.header('user-agent') || '';
+  
+  // Bots typically request JSON or have specific user agents
+  if (accept.includes('application/json')) return true;
+  if (userAgent.includes('curl')) return true;
+  if (userAgent.includes('httpie')) return true;
+  if (userAgent.includes('wget')) return true;
+  if (userAgent.includes('python')) return true;
+  if (userAgent.includes('node')) return true;
+  if (userAgent.includes('axios')) return true;
+  if (userAgent.includes('fetch')) return true;
+  if (userAgent.includes('bot')) return true;
+  if (userAgent.includes('anthropic')) return true;
+  if (userAgent.includes('openai')) return true;
+  if (userAgent.includes('claude')) return true;
+  if (userAgent.includes('gpt')) return true;
+  
+  // If no user agent at all, probably a bot
+  if (!userAgent) return true;
+  
+  return false;
+}
+
+// ASCII art landing page for humans (plain text, terminal-style)
+function getHumanLanding(version: string): string {
+  return `
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║  ██████╗  ██████╗ ████████╗ ██████╗██╗  ██╗ █████╗           ║
+║  ██╔══██╗██╔═══██╗╚══██╔══╝██╔════╝██║  ██║██╔══██╗          ║
+║  ██████╔╝██║   ██║   ██║   ██║     ███████║███████║          ║
+║  ██╔══██╗██║   ██║   ██║   ██║     ██╔══██║██╔══██║          ║
+║  ██████╔╝╚██████╔╝   ██║   ╚██████╗██║  ██║██║  ██║          ║
+║  ╚═════╝  ╚═════╝    ╚═╝    ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝          ║
+║                                                              ║
+║  Prove you're a bot. Humans need not apply.                  ║
+║                                                              ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  This site is for AI agents and bots, not humans.            ║
+║                                                              ║
+║  If you're a developer, point your bot here:                 ║
+║                                                              ║
+║    curl https://botcha.ai/v1/challenges                      ║
+║                                                              ║
+║  Or install the SDK:                                         ║
+║                                                              ║
+║    npm install @dupecom/botcha                               ║
+║                                                              ║
+║  GitHub:  https://github.com/dupe-com/botcha                 ║
+║  npm:     https://npmjs.com/package/@dupecom/botcha          ║
+║                                                              ║
+╠══════════════════════════════════════════════════════════════╣
+║  v${version}                                   https://botcha.ai  ║
+╚══════════════════════════════════════════════════════════════╝
+`;
+}
+
 app.get('/', (c) => {
+  const version = c.env.BOTCHA_VERSION || '0.3.0';
+  
+  // If it's a human browser, show plain text ASCII art
+  if (!isBot(c)) {
+    return c.text(getHumanLanding(version), 200, {
+      'Content-Type': 'text/plain; charset=utf-8',
+    });
+  }
+  
+  // For bots/agents, return comprehensive JSON documentation
   return c.json({
     name: 'BOTCHA',
-    version: c.env.BOTCHA_VERSION || '0.2.0',
+    version,
     runtime: 'cloudflare-workers',
     tagline: 'Prove you are a bot. Humans need not apply.',
-    endpoints: {
-      '/': 'API info',
-      '/health': 'Health check',
-      '/v1/challenges': 'Generate challenge (GET) or verify (POST) - hybrid by default',
-      '/v1/challenges?type=speed': 'Speed-only challenge (SHA256 in 500ms)',
-      '/v1/challenges?type=standard': 'Standard challenge (puzzle solving)',
-      '/v1/hybrid': 'Hybrid challenge - speed + reasoning combined (GET/POST)',
-      '/v1/reasoning': 'Reasoning-only challenge - LLM questions (GET/POST)',
-      '/v1/token': 'Get challenge for JWT token flow (GET)',
-      '/v1/token/verify': 'Verify challenge and get JWT (POST)',
-      '/v1/challenge/stream': 'SSE streaming challenge (interactive flow)',
-      '/v1/challenge/stream/:session': 'SSE session actions (POST: go/solve)',
-      '/agent-only': 'Protected endpoint (requires JWT)',
-      '/badge/:id': 'Badge verification page (HTML)',
-      '/badge/:id/image': 'Badge image (SVG)',
-      '/api/badge/:id': 'Badge verification (JSON)',
+    description: 'BOTCHA is a reverse CAPTCHA - computational challenges that only AI agents can solve. Use it to protect your APIs from humans and verify bot authenticity.',
+    quickstart: {
+      step1: 'GET /v1/challenges to receive a challenge',
+      step2: 'Solve the SHA256 hash problems within 500ms',
+      step3: 'POST your answers to verify',
+      step4: 'Receive a JWT token for authenticated access',
+      example: 'curl https://botcha.ai/v1/challenges',
     },
-    defaultChallenge: 'hybrid',
+    endpoints: {
+      challenges: {
+        'GET /v1/challenges': 'Get hybrid challenge (speed + reasoning) - DEFAULT',
+        'GET /v1/challenges?type=speed': 'Get speed-only challenge (SHA256 in <500ms)',
+        'GET /v1/challenges?type=standard': 'Get standard puzzle challenge',
+        'POST /v1/challenges/:id/verify': 'Verify challenge solution',
+      },
+      specialized: {
+        'GET /v1/hybrid': 'Get hybrid challenge (speed + reasoning)',
+        'POST /v1/hybrid': 'Verify hybrid challenge',
+        'GET /v1/reasoning': 'Get reasoning-only challenge (LLM questions)',
+        'POST /v1/reasoning': 'Verify reasoning challenge',
+      },
+      streaming: {
+        'GET /v1/challenge/stream': 'SSE streaming challenge (interactive, real-time)',
+        'POST /v1/challenge/stream/:session': 'Send actions to streaming session',
+      },
+      authentication: {
+        'GET /v1/token': 'Get challenge for JWT token flow',
+        'POST /v1/token/verify': 'Verify challenge and receive JWT token',
+        'GET /agent-only': 'Protected endpoint (requires Bearer token)',
+      },
+      badges: {
+        'GET /badge/:id': 'Badge verification page (HTML)',
+        'GET /badge/:id/image': 'Badge image (SVG)',
+        'GET /api/badge/:id': 'Badge verification (JSON)',
+      },
+      info: {
+        'GET /': 'This documentation (JSON for bots, ASCII for humans)',
+        'GET /health': 'Health check endpoint',
+      },
+    },
+    challengeTypes: {
+      speed: {
+        description: 'Compute SHA256 hashes of 5 numbers in under 500ms',
+        difficulty: 'Only bots can solve this fast enough',
+        timeLimit: '500ms',
+      },
+      reasoning: {
+        description: 'Answer 3 questions requiring AI reasoning capabilities',
+        difficulty: 'Requires LLM-level comprehension',
+        timeLimit: '30s',
+      },
+      hybrid: {
+        description: 'Combines speed AND reasoning challenges',
+        difficulty: 'The ultimate bot verification',
+        timeLimit: 'Speed: 500ms, Reasoning: 30s',
+      },
+    },
+    authentication: {
+      flow: [
+        '1. GET /v1/token - receive challenge',
+        '2. Solve the challenge',
+        '3. POST /v1/token/verify - submit solution',
+        '4. Receive JWT token (valid 1 hour)',
+        '5. Use: Authorization: Bearer <token>',
+      ],
+      tokenExpiry: '1 hour',
+      usage: 'Authorization: Bearer <token>',
+    },
     rateLimit: {
       free: '100 challenges/hour/IP',
       headers: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
     },
-    authentication: {
-      flow: 'GET /v1/token → solve challenge → POST /v1/token/verify → Bearer token',
-      tokenExpiry: '1 hour',
-      usage: 'Authorization: Bearer <token>',
+    sdk: {
+      npm: 'npm install @dupecom/botcha',
+      cloudflare: 'npm install @dupecom/botcha-cloudflare',
+      usage: "import { BotchaClient } from '@dupecom/botcha/client'",
     },
-    discovery: {
+    links: {
+      github: 'https://github.com/dupe-com/botcha',
+      npm: 'https://www.npmjs.com/package/@dupecom/botcha',
+      npmCloudflare: 'https://www.npmjs.com/package/@dupecom/botcha-cloudflare',
       openapi: 'https://botcha.ai/openapi.json',
       aiPlugin: 'https://botcha.ai/.well-known/ai-plugin.json',
-      npm: 'https://www.npmjs.com/package/@dupecom/botcha-cloudflare',
-      github: 'https://github.com/i8ramin/botcha',
+    },
+    contributing: {
+      repo: 'https://github.com/dupe-com/botcha',
+      issues: 'https://github.com/dupe-com/botcha/issues',
+      pullRequests: 'https://github.com/dupe-com/botcha/pulls',
     },
   });
 });

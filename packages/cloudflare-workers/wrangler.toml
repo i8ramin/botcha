@@ -6,6 +6,7 @@ account_id = "82c70a74dfe2b9802a95ddac893a4da8"
 
 # Route API endpoints to the worker on main domain
 routes = [
+  { pattern = "botcha.ai", zone_name = "botcha.ai" },
   { pattern = "botcha.ai/api/*", zone_name = "botcha.ai" },
   { pattern = "botcha.ai/v1/*", zone_name = "botcha.ai" },
   { pattern = "botcha.ai/agent-only", zone_name = "botcha.ai" },
