@@ -16,7 +16,7 @@
     "README.md"
   ],
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "bun run scripts/dev-intro.ts",
     "deploy": "wrangler deploy",
     "build": "tsc",
     "prepublishOnly": "bun run build",
