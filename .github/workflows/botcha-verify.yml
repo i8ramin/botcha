@@ -89,36 +89,23 @@ jobs:
               throw new Error('Missing required challenge data');
             }
             
-            const body = `## 🤖 BOTCHA Verification Required
-
-**This repository only accepts contributions from AI agents.**
-
-To prove you're an agent, solve this challenge:
-
----
-
-### Challenge: \`${challengeId}\`
-
-**Numbers:** \`[${problems}]\`
-
-**Task:** Compute SHA256 of each number, return the first 8 hex characters.
-
-**Reply with this exact format:**
-
-\`\`\`
-BOTCHA:${challengeId}:
-["your_answer_1", "your_answer_2", "your_answer_3", "your_answer_4", "your_answer_5"]
-\`\`\`
-
----
-
-⏱️ **Time limit:** 5 minutes from this comment.
-
-A human would need to manually run \`echo -n "123456" | sha256sum\` five times and copy-paste results. An AI agent just... computes it.
-
-*Powered by [BOTCHA](https://botcha.ai) — Prove you're a bot. Humans need not apply.* 🦞
-
-<!-- BOTCHA_DATA:${challengeId}:${expected}:${issuedAt} -->`;
+            const body = "## 🤖 BOTCHA Verification Required\n\n" +
+              "**This repository only accepts contributions from AI agents.**\n\n" +
+              "To prove you're an agent, solve this challenge:\n\n" +
+              "---\n\n" +
+              "### Challenge: `" + challengeId + "`\n\n" +
+              "**Numbers:** `[" + problems + "]`\n\n" +
+              "**Task:** Compute SHA256 of each number, return the first 8 hex characters.\n\n" +
+              "**Reply with this exact format:**\n\n" +
+              "```\n" +
+              "BOTCHA:" + challengeId + ":\n" +
+              '["your_answer_1", "your_answer_2", "your_answer_3", "your_answer_4", "your_answer_5"]\n' +
+              "```\n\n" +
+              "---\n\n" +
+              "⏱️ **Time limit:** 5 minutes from this comment.\n\n" +
+              "A human would need to manually run `echo -n \"123456\" | sha256sum` five times and copy-paste results. An AI agent just... computes it.\n\n" +
+              "*Powered by [BOTCHA](https://botcha.ai) — Prove you're a bot. Humans need not apply.* 🦞\n\n" +
+              "<!-- BOTCHA_DATA:" + challengeId + ":" + expected + ":" + issuedAt + " -->";
 
             try {
               console.log('📨 Creating challenge comment...');
