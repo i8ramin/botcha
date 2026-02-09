@@ -23,6 +23,10 @@ jobs:
       - name: Generate Random Numbers
         id: challenge
         run: |
+          echo "🎲 Generating BOTCHA challenge for PR #${{ github.event.pull_request.number }}"
+          echo "📊 Challenge initiated by: ${{ github.event.pull_request.user.login }}"
+          echo "⏰ Start time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          
           # Generate 5 random 6-digit numbers
           NUM1=$((100000 + RANDOM % 900000))
           NUM2=$((100000 + RANDOM % 900000))
@@ -30,20 +34,29 @@ jobs:
           NUM4=$((100000 + RANDOM % 900000))
           NUM5=$((100000 + RANDOM % 900000))
           
+          echo "🔢 Generated numbers: $NUM1, $NUM2, $NUM3, $NUM4, $NUM5"
+          
           # Create challenge ID from timestamp
           CHALLENGE_ID="gh-$(date +%s)-${{ github.event.pull_request.number }}"
+          echo "🆔 Challenge ID: $CHALLENGE_ID"
           
           # Compute expected answers (first 8 chars of SHA256)
+          echo "🔐 Computing SHA256 hashes..."
           ANS1=$(echo -n "$NUM1" | sha256sum | cut -c1-8)
           ANS2=$(echo -n "$NUM2" | sha256sum | cut -c1-8)
           ANS3=$(echo -n "$NUM3" | sha256sum | cut -c1-8)
           ANS4=$(echo -n "$NUM4" | sha256sum | cut -c1-8)
           ANS5=$(echo -n "$NUM5" | sha256sum | cut -c1-8)
           
+          echo "✅ Expected answers: $ANS1, $ANS2, $ANS3, $ANS4, $ANS5"
+          
+          # Set outputs
           echo "challenge_id=$CHALLENGE_ID" >> $GITHUB_OUTPUT
           echo "problems=$NUM1, $NUM2, $NUM3, $NUM4, $NUM5" >> $GITHUB_OUTPUT
           echo "expected=$ANS1,$ANS2,$ANS3,$ANS4,$ANS5" >> $GITHUB_OUTPUT
           echo "issued_at=$(date +%s)" >> $GITHUB_OUTPUT
+          
+          echo "📝 Challenge data stored in workflow outputs"
 
       - name: Post Challenge Comment
         uses: actions/github-script@v7
@@ -54,10 +67,26 @@ jobs:
           ISSUED_AT: ${{ steps.challenge.outputs.issued_at }}
         with:
           script: |
+            console.log('📝 Posting BOTCHA challenge comment...');
+            
             const challengeId = process.env.CHALLENGE_ID;
             const problems = process.env.PROBLEMS;
             const expected = process.env.EXPECTED;
             const issuedAt = process.env.ISSUED_AT;
+            
+            console.log(`🆔 Challenge ID: ${challengeId}`);
+            console.log(`🔢 Problems: ${problems}`);
+            console.log(`⏰ Issued at: ${new Date(issuedAt * 1000).toISOString()}`);
+            console.log(`🎯 PR #${context.payload.pull_request.number} by @${context.payload.pull_request.user.login}`);
+            
+            if (!challengeId || !problems || !expected || !issuedAt) {
+              console.error('❌ Missing required environment variables!');
+              console.error(`challengeId: ${challengeId}`);
+              console.error(`problems: ${problems}`);
+              console.error(`expected: ${expected}`);
+              console.error(`issuedAt: ${issuedAt}`);
+              throw new Error('Missing required challenge data');
+            }
             
             const body = `## 🤖 BOTCHA Verification Required
 
@@ -90,24 +119,40 @@ A human would need to manually run \`echo -n "123456" | sha256sum\` five times a
 
 <!-- BOTCHA_DATA:${challengeId}:${expected}:${issuedAt} -->`;
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: body
-            });
+            try {
+              console.log('📨 Creating challenge comment...');
+              const comment = await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: body
+              });
+              
+              console.log(`✅ Challenge comment created successfully (ID: ${comment.data.id})`);
+              console.log(`🔗 Comment URL: ${comment.data.html_url}`);
+            } catch (error) {
+              console.error('❌ Failed to create challenge comment:', error.message);
+              console.error('📊 Error details:', JSON.stringify(error.response?.data || error, null, 2));
+              throw error;
+            }
 
             // Add pending label
             try {
+              console.log('🏷️ Adding botcha-pending label...');
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.pull_request.number,
                 labels: ['botcha-pending']
               });
-            } catch (e) {
-              console.log('Could not add label:', e.message);
+              console.log('✅ botcha-pending label added successfully');
+            } catch (error) {
+              console.warn('⚠️ Could not add botcha-pending label:', error.message);
+              console.warn('📊 Label error details:', JSON.stringify(error.response?.data || error, null, 2));
+              // Don't fail the workflow for label issues
             }
+            
+            console.log('🎉 Challenge posting completed successfully!')
 
   verify:
     name: Verify Solution
@@ -119,51 +164,95 @@ A human would need to manually run \`echo -n "123456" | sha256sum\` five times a
         uses: actions/github-script@v7
         with:
           script: |
-            // Get all comments on this PR
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.issue.number
-            });
+            console.log('🔍 Searching for BOTCHA challenge data...');
+            console.log(`📝 Comment triggered by: @${context.payload.comment.user.login}`);
+            console.log(`📄 PR #${context.payload.issue.number}`);
+            console.log(`⏰ Comment time: ${new Date(context.payload.comment.created_at).toISOString()}`);
             
-            // Find the BOTCHA challenge comment (most recent one, in case PR was reopened)
-            const challengeComment = comments.data.reverse().find(c => 
-              c.body.includes('BOTCHA_DATA:') && 
-              c.user.login === 'github-actions[bot]'
-            );
-            
-            if (!challengeComment) {
+            try {
+              // Get all comments on this PR
+              console.log('📥 Fetching all PR comments...');
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number
+              });
+              
+              console.log(`📊 Found ${comments.data.length} total comments`);
+              
+              // Find the BOTCHA challenge comment (most recent one, in case PR was reopened)
+              console.log('🔎 Searching for BOTCHA challenge comments...');
+              const botchaComments = comments.data.filter(c => 
+                c.body.includes('BOTCHA_DATA:') && 
+                c.user.login === 'github-actions[bot]'
+              );
+              
+              console.log(`🤖 Found ${botchaComments.length} BOTCHA challenge comment(s)`);
+              
+              if (botchaComments.length === 0) {
+                console.log('❌ No BOTCHA challenge comments found');
+                core.setOutput('found', 'false');
+                return;
+              }
+              
+              // Get the most recent challenge (in case PR was reopened)
+              const challengeComment = botchaComments[botchaComments.length - 1];
+              console.log(`📌 Using challenge comment ID: ${challengeComment.id}`);
+              console.log(`⏰ Challenge issued at: ${challengeComment.created_at}`);
+              
+              // Extract challenge data from hidden comment
+              console.log('🔧 Extracting challenge data...');
+              const match = challengeComment.body.match(/<!-- BOTCHA_DATA:([^:]+):([^:]+):(\d+) -->/);
+              if (!match) {
+                console.error('❌ Could not extract challenge data from comment');
+                console.error('📄 Comment body preview:', challengeComment.body.substring(0, 200) + '...');
+                core.setOutput('found', 'false');
+                return;
+              }
+              
+              const [, challengeId, expected, issuedAt] = match;
+              console.log(`✅ Extracted challenge data:`);
+              console.log(`   🆔 Challenge ID: ${challengeId}`);
+              console.log(`   🎯 Expected answers: ${expected}`);
+              console.log(`   ⏰ Issued timestamp: ${issuedAt} (${new Date(issuedAt * 1000).toISOString()})`);
+              
+              // Get PR author for verification
+              console.log('👤 Fetching PR author information...');
+              const pr = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.issue.number
+              });
+              
+              console.log(`✅ PR author: @${pr.data.user.login}`);
+              console.log(`📊 PR created: ${pr.data.created_at}`);
+              console.log(`📝 PR title: ${pr.data.title}`);
+              
+              // Set all outputs
+              core.setOutput('found', 'true');
+              core.setOutput('challenge_id', challengeId);
+              core.setOutput('expected', expected);
+              core.setOutput('issued_at', issuedAt);
+              core.setOutput('challenge_comment_id', challengeComment.id);
+              core.setOutput('pr_author', pr.data.user.login);
+              
+              console.log('🎉 Challenge data extraction completed successfully!');
+              
+            } catch (error) {
+              console.error('❌ Error while finding challenge data:', error.message);
+              console.error('📊 Error details:', JSON.stringify(error.response?.data || error, null, 2));
               core.setOutput('found', 'false');
-              return;
+              throw error;
             }
-            
-            // Extract challenge data from hidden comment
-            const match = challengeComment.body.match(/<!-- BOTCHA_DATA:([^:]+):([^:]+):(\d+) -->/);
-            if (!match) {
-              core.setOutput('found', 'false');
-              return;
-            }
-            
-            const [, challengeId, expected, issuedAt] = match;
-            
-            // Get PR author for verification
-            const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.issue.number
-            });
-            
-            core.setOutput('found', 'true');
-            core.setOutput('challenge_id', challengeId);
-            core.setOutput('expected', expected);
-            core.setOutput('issued_at', issuedAt);
-            core.setOutput('challenge_comment_id', challengeComment.id);
-            core.setOutput('pr_author', pr.data.user.login);
 
       - name: Parse Solution from Comment
         if: steps.find_challenge.outputs.found == 'true'
         id: parse_solution
         run: |
+          echo "🔍 Parsing solution from comment..."
+          echo "👤 Comment author: ${{ github.event.comment.user.login }}"
+          echo "⏰ Comment time: ${{ github.event.comment.created_at }}"
+          
           # Get the comment body
           COMMENT_BODY=$(cat << 'ENDOFCOMMENT'
           ${{ github.event.comment.body }}
@@ -172,58 +261,135 @@ A human would need to manually run \`echo -n "123456" | sha256sum\` five times a
           
           CHALLENGE_ID="${{ steps.find_challenge.outputs.challenge_id }}"
           
+          echo "🆔 Looking for challenge ID: $CHALLENGE_ID"
+          echo "📏 Comment length: $(echo "$COMMENT_BODY" | wc -c) characters"
+          echo "📄 Comment preview: $(echo "$COMMENT_BODY" | head -3 | tr '\n' ' ')..."
+          
           # Check if this comment contains a solution for our challenge
           if echo "$COMMENT_BODY" | grep -q "BOTCHA:$CHALLENGE_ID"; then
+            echo "✅ Found BOTCHA challenge response in comment"
+            
             # Extract the answers array
+            echo "🔧 Extracting answers array..."
             ANSWERS=$(echo "$COMMENT_BODY" | grep -oE '\["[a-fA-F0-9]+",\s*"[a-fA-F0-9]+",\s*"[a-fA-F0-9]+",\s*"[a-fA-F0-9]+",\s*"[a-fA-F0-9]+"\]' | head -1)
             
             if [ -n "$ANSWERS" ]; then
+              echo "✅ Found answers array: $ANSWERS"
+              
               # Parse answers into comma-separated format for comparison
+              echo "🔧 Parsing JSON array..."
               PARSED=$(echo "$ANSWERS" | jq -r 'join(",")' 2>/dev/null || echo "")
+              
               if [ -n "$PARSED" ]; then
+                echo "✅ Successfully parsed answers: $PARSED"
                 echo "answers=$PARSED" >> $GITHUB_OUTPUT
                 echo "found=true" >> $GITHUB_OUTPUT
               else
+                echo "❌ Failed to parse JSON array"
+                echo "🔍 Raw answers: $ANSWERS"
                 echo "found=false" >> $GITHUB_OUTPUT
               fi
             else
+              echo "❌ No valid answers array found"
+              echo "🔍 Searching for any JSON-like pattern..."
+              ANY_ARRAY=$(echo "$COMMENT_BODY" | grep -oE '\[.*\]' | head -1)
+              if [ -n "$ANY_ARRAY" ]; then
+                echo "🔍 Found array-like pattern: $ANY_ARRAY"
+              else
+                echo "🔍 No array patterns found at all"
+              fi
               echo "found=false" >> $GITHUB_OUTPUT
             fi
           else
+            echo "❌ No BOTCHA challenge response found in comment"
+            echo "🔍 Checking for any BOTCHA mentions..."
+            if echo "$COMMENT_BODY" | grep -q "BOTCHA"; then
+              echo "🔍 Found BOTCHA mention but wrong challenge ID"
+              FOUND_ID=$(echo "$COMMENT_BODY" | grep -oE 'BOTCHA:[^:]*:' | head -1 | sed 's/BOTCHA:\(.*\):/\1/')
+              echo "🔍 Found challenge ID: $FOUND_ID"
+              echo "🔍 Expected challenge ID: $CHALLENGE_ID"
+            else
+              echo "🔍 No BOTCHA mentions found"
+            fi
             echo "found=false" >> $GITHUB_OUTPUT
           fi
+          
+          echo "📊 Solution parsing completed"
 
       - name: Verify Solution
         if: steps.parse_solution.outputs.found == 'true'
         id: verify
         run: |
+          echo "🔐 Verifying BOTCHA solution..."
+          
           EXPECTED="${{ steps.find_challenge.outputs.expected }}"
           ANSWERS="${{ steps.parse_solution.outputs.answers }}"
           ISSUED_AT="${{ steps.find_challenge.outputs.issued_at }}"
           NOW=$(date +%s)
           
+          echo "📊 Verification data:"
+          echo "   🎯 Expected: $EXPECTED"
+          echo "   💡 Provided: $ANSWERS"
+          echo "   ⏰ Challenge issued: $ISSUED_AT ($(date -d @$ISSUED_AT '+%Y-%m-%d %H:%M:%S UTC'))"
+          echo "   ⏰ Current time: $NOW ($(date -d @$NOW '+%Y-%m-%d %H:%M:%S UTC'))"
+          
           # Check time window (5 minutes = 300 seconds)
           TIME_DIFF=$((NOW - ISSUED_AT))
+          SOLVE_WINDOW=${{ env.SOLVE_WINDOW }}
           
-          if [ $TIME_DIFF -gt ${{ env.SOLVE_WINDOW }} ]; then
+          echo "⏱️ Time analysis:"
+          echo "   📏 Time taken: $TIME_DIFF seconds"
+          echo "   ⏰ Time limit: $SOLVE_WINDOW seconds"
+          echo "   📊 Remaining: $((SOLVE_WINDOW - TIME_DIFF)) seconds"
+          
+          if [ $TIME_DIFF -gt $SOLVE_WINDOW ]; then
+            echo "❌ TIMEOUT: Solution submitted too late"
+            echo "⏰ Limit exceeded by $((TIME_DIFF - SOLVE_WINDOW)) seconds"
             echo "valid=false" >> $GITHUB_OUTPUT
             echo "reason=timeout" >> $GITHUB_OUTPUT
             echo "time_taken=$TIME_DIFF" >> $GITHUB_OUTPUT
             exit 0
           fi
           
+          echo "✅ Time check passed"
+          
           # Compare answers (case-insensitive)
+          echo "🔍 Comparing answers..."
           EXPECTED_LOWER=$(echo "$EXPECTED" | tr '[:upper:]' '[:lower:]')
           ANSWERS_LOWER=$(echo "$ANSWERS" | tr '[:upper:]' '[:lower:]')
           
+          echo "📊 Normalized comparison:"
+          echo "   🎯 Expected (normalized): $EXPECTED_LOWER"
+          echo "   💡 Provided (normalized): $ANSWERS_LOWER"
+          
           if [ "$EXPECTED_LOWER" = "$ANSWERS_LOWER" ]; then
+            echo "✅ VERIFICATION PASSED!"
+            echo "🎉 All answers match perfectly"
             echo "valid=true" >> $GITHUB_OUTPUT
             echo "time_taken=$TIME_DIFF" >> $GITHUB_OUTPUT
           else
+            echo "❌ VERIFICATION FAILED!"
+            echo "🔍 Answer mismatch detected"
+            
+            # Show detailed diff for debugging
+            echo "📊 Detailed comparison:"
+            IFS=',' read -ra EXPECTED_ARRAY <<< "$EXPECTED_LOWER"
+            IFS=',' read -ra PROVIDED_ARRAY <<< "$ANSWERS_LOWER"
+            
+            for i in {0..4}; do
+              if [ "${EXPECTED_ARRAY[$i]}" = "${PROVIDED_ARRAY[$i]}" ]; then
+                echo "   ✅ Answer $((i+1)): ${PROVIDED_ARRAY[$i]} (correct)"
+              else
+                echo "   ❌ Answer $((i+1)): ${PROVIDED_ARRAY[$i]} (expected: ${EXPECTED_ARRAY[$i]})"
+              fi
+            done
+            
             echo "valid=false" >> $GITHUB_OUTPUT
             echo "reason=incorrect" >> $GITHUB_OUTPUT
             echo "time_taken=$TIME_DIFF" >> $GITHUB_OUTPUT
           fi
+          
+          echo "🏁 Verification completed"
 
       - name: Update PR Status
         if: steps.parse_solution.outputs.found == 'true'
@@ -233,22 +399,43 @@ A human would need to manually run \`echo -n "123456" | sha256sum\` five times a
           REASON: ${{ steps.verify.outputs.reason }}
           TIME_TAKEN: ${{ steps.verify.outputs.time_taken }}
           PR_AUTHOR: ${{ steps.find_challenge.outputs.pr_author }}
+          CHALLENGE_ID: ${{ steps.find_challenge.outputs.challenge_id }}
+          EXPECTED: ${{ steps.find_challenge.outputs.expected }}
+          PROVIDED: ${{ steps.parse_solution.outputs.answers }}
         with:
           script: |
+            console.log('📝 Updating PR status after verification...');
+            
             const valid = process.env.VALID === 'true';
             const reason = process.env.REASON;
             const timeTaken = process.env.TIME_TAKEN;
             const prAuthor = process.env.PR_AUTHOR;
+            const challengeId = process.env.CHALLENGE_ID;
+            const expected = process.env.EXPECTED;
+            const provided = process.env.PROVIDED;
             const prNumber = context.payload.issue.number;
             const commenter = context.payload.comment.user.login;
             
+            console.log('📊 Verification results:');
+            console.log(`   ✅ Valid: ${valid}`);
+            console.log(`   📝 Reason: ${reason || 'success'}`);
+            console.log(`   ⏰ Time taken: ${timeTaken}s`);
+            console.log(`   👤 PR author: @${prAuthor}`);
+            console.log(`   🗣️ Commenter: @${commenter}`);
+            console.log(`   🆔 Challenge: ${challengeId}`);
+            
             // Security: Only the PR author can solve the challenge
             if (commenter !== prAuthor) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: `## ⚠️ Verification Rejected
+              console.log('🚫 SECURITY CHECK FAILED: Wrong user attempting verification');
+              console.log(`   👤 Expected: @${prAuthor}`);
+              console.log(`   🗣️ Actual: @${commenter}`);
+              
+              try {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: `## ⚠️ Verification Rejected
 
 Only the PR author (**@${prAuthor}**) can solve the BOTCHA challenge.
 
@@ -256,72 +443,147 @@ Only the PR author (**@${prAuthor}**) can solve the BOTCHA challenge.
 
 ---
 *Nice try, but identity matters here! 🤔*`
-              });
+                });
+                console.log('✅ Security rejection comment posted');
+              } catch (error) {
+                console.error('❌ Failed to post security rejection comment:', error.message);
+                throw error;
+              }
               return;
             }
             
+            console.log('✅ Security check passed - correct user');
+            
             if (valid) {
+              console.log('🎉 VERIFICATION SUCCESS - Processing approval...');
+              
               // Remove pending, add verified
               try {
+                console.log('🏷️ Removing botcha-pending label...');
                 await github.rest.issues.removeLabel({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: prNumber,
                   name: 'botcha-pending'
                 });
-              } catch (e) { /* label might not exist */ }
+                console.log('✅ botcha-pending label removed');
+              } catch (e) { 
+                console.warn('⚠️ Could not remove botcha-pending label (may not exist):', e.message);
+              }
               
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                labels: ['botcha-verified']
-              });
+              try {
+                console.log('🏷️ Adding botcha-verified label...');
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  labels: ['botcha-verified']
+                });
+                console.log('✅ botcha-verified label added');
+              } catch (error) {
+                console.error('❌ Failed to add botcha-verified label:', error.message);
+                console.error('📊 Label error details:', JSON.stringify(error.response?.data || error, null, 2));
+                // Don't fail for label issues
+              }
               
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: `## ✅ BOTCHA Verification Passed!
+              try {
+                console.log('📝 Posting success comment...');
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: `## ✅ BOTCHA Verification Passed!
 
 🤖 **@${commenter}** has proven they are an AI agent.
 
 ⏱️ Solved in **${timeTaken} seconds**
 
+📊 **Challenge Details:**
+- 🆔 Challenge ID: \`${challengeId}\`
+- 🎯 All 5 SHA256 hashes computed correctly
+- ⚡ Solved in ${Math.round(timeTaken/60*100)/100} minutes
+
 This PR is now eligible for review and merge.
 
 ---
 *Welcome, fellow agent! 🦞*`
-              });
-            } else {
-              let failMessage = '';
-              if (reason === 'timeout') {
-                failMessage = `⏱️ **Time's up!** You took ${timeTaken} seconds (limit: 300s).\n\nA new challenge will be issued when you reopen the PR.`;
-              } else {
-                failMessage = `The answers were incorrect. Please verify your SHA256 computations.\n\nRemember: SHA256 of each number, first 8 hex characters.`;
+                });
+                console.log('✅ Success comment posted');
+              } catch (error) {
+                console.error('❌ Failed to post success comment:', error.message);
+                console.error('📊 Comment error details:', JSON.stringify(error.response?.data || error, null, 2));
+                throw error;
               }
               
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: `## ❌ BOTCHA Verification Failed
+            } else {
+              console.log('❌ VERIFICATION FAILED - Processing rejection...');
+              
+              let failMessage = '';
+              let debugInfo = '';
+              
+              if (reason === 'timeout') {
+                const minutes = Math.round(timeTaken/60*100)/100;
+                const limitMinutes = Math.round(300/60*100)/100;
+                failMessage = `⏱️ **Time's up!** You took **${timeTaken} seconds** (${minutes} min) but the limit is **300 seconds** (${limitMinutes} min).\n\nA new challenge will be issued when you reopen the PR.`;
+                debugInfo = `**Debug Info:**\n- ⏰ Started: ${new Date(Date.now() - timeTaken*1000).toISOString()}\n- 🏁 Submitted: ${new Date().toISOString()}\n- 📏 Duration: ${timeTaken}s`;
+              } else {
+                failMessage = `❌ **Incorrect answers!** Please verify your SHA256 computations.\n\nRemember: SHA256 of each number, return the **first 8 hex characters** of each hash.`;
+                debugInfo = `**Debug Info:**\n- 🆔 Challenge: \`${challengeId}\`\n- 🎯 Expected: \`${expected}\`\n- 💡 Provided: \`${provided}\`\n- ⏰ Time taken: ${timeTaken}s`;
+              }
+              
+              try {
+                console.log('📝 Posting failure comment...');
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: `## ❌ BOTCHA Verification Failed
 
 ${failMessage}
 
+${debugInfo}
+
 ---
 *Are you sure you're an AI agent? 🤔*`
-              });
+                });
+                console.log('✅ Failure comment posted');
+              } catch (error) {
+                console.error('❌ Failed to post failure comment:', error.message);
+                console.error('📊 Comment error details:', JSON.stringify(error.response?.data || error, null, 2));
+                throw error;
+              }
               
               // Add failed label
               try {
+                console.log('🏷️ Adding botcha-failed label...');
                 await github.rest.issues.addLabels({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: prNumber,
                   labels: ['botcha-failed']
                 });
-              } catch (e) {
-                console.log('Could not add botcha-failed label:', e.message);
+                console.log('✅ botcha-failed label added');
+              } catch (error) {
+                console.warn('⚠️ Could not add botcha-failed label:', error.message);
+                console.warn('📊 Label error details:', JSON.stringify(error.response?.data || error, null, 2));
+                // Don't fail workflow for label issues
               }
             }
+            
+            console.log('🏁 PR status update completed successfully!');
+
+      - name: Workflow Summary
+        if: always()
+        run: |
+          echo "📋 BOTCHA Workflow Summary"
+          echo "========================="
+          echo "👤 PR Author: ${{ steps.find_challenge.outputs.pr_author || 'N/A' }}"
+          echo "🗣️ Commenter: ${{ github.event.comment.user.login }}"
+          echo "🆔 Challenge ID: ${{ steps.find_challenge.outputs.challenge_id || 'N/A' }}"
+          echo "🔍 Challenge Found: ${{ steps.find_challenge.outputs.found || 'N/A' }}"
+          echo "✅ Solution Found: ${{ steps.parse_solution.outputs.found || 'N/A' }}"
+          echo "🎯 Valid Solution: ${{ steps.verify.outputs.valid || 'N/A' }}"
+          echo "⏰ Time Taken: ${{ steps.verify.outputs.time_taken || 'N/A' }} seconds"
+          echo "📝 Failure Reason: ${{ steps.verify.outputs.reason || 'success' }}"
+          echo "⏰ Workflow Completed: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "========================="
