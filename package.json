@@ -25,7 +25,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "dev": "cd packages/cloudflare-workers && wrangler dev",
+    "dev": "cd packages/cloudflare-workers && bun run dev",
     "prepublishOnly": "bun run build",
     "test": "vitest",
     "test:ui": "vitest --ui",
