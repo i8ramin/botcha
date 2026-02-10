@@ -11,7 +11,13 @@ routes = [
   { pattern = "botcha.ai/v1/*", zone_name = "botcha.ai" },
   { pattern = "botcha.ai/agent-only", zone_name = "botcha.ai" },
   { pattern = "botcha.ai/badge/*", zone_name = "botcha.ai" },
-  { pattern = "botcha.ai/health", zone_name = "botcha.ai" }
+  { pattern = "botcha.ai/health", zone_name = "botcha.ai" },
+  # Discovery files for AI agents
+  { pattern = "botcha.ai/robots.txt", zone_name = "botcha.ai" },
+  { pattern = "botcha.ai/ai.txt", zone_name = "botcha.ai" },
+  { pattern = "botcha.ai/openapi.json", zone_name = "botcha.ai" },
+  { pattern = "botcha.ai/.well-known/*", zone_name = "botcha.ai" },
+  { pattern = "botcha.ai/sitemap.xml", zone_name = "botcha.ai" }
 ]
 
 # Environment variables

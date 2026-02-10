@@ -27,6 +27,7 @@ import { generateToken, verifyToken, extractBearerToken } from './auth';
 import { checkRateLimit, getClientIP } from './rate-limit';
 import { verifyBadge, generateBadgeSvg, generateBadgeHtml, createBadgeResponse } from './badge';
 import streamRoutes from './routes/stream';
+import { ROBOTS_TXT, AI_TXT, AI_PLUGIN_JSON, SITEMAP_XML, getOpenApiSpec } from './static';
 import {
   type AnalyticsEngineDataset,
   trackChallengeGenerated,
@@ -304,6 +305,47 @@ app.get('/', (c) => {
 
 app.get('/health', (c) => {
   return c.json({ status: 'ok', runtime: 'cloudflare-workers' });
+});
+
+// ============ STATIC DISCOVERY FILES ============
+
+// robots.txt - AI crawler instructions
+app.get('/robots.txt', (c) => {
+  return c.text(ROBOTS_TXT, 200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Cache-Control': 'public, max-age=86400',
+  });
+});
+
+// ai.txt - AI agent discovery file
+app.get('/ai.txt', (c) => {
+  return c.text(AI_TXT, 200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Cache-Control': 'public, max-age=86400',
+  });
+});
+
+// OpenAPI spec
+app.get('/openapi.json', (c) => {
+  const version = c.env.BOTCHA_VERSION || '0.3.0';
+  return c.json(getOpenApiSpec(version), 200, {
+    'Cache-Control': 'public, max-age=3600',
+  });
+});
+
+// AI plugin manifest (ChatGPT/OpenAI format)
+app.get('/.well-known/ai-plugin.json', (c) => {
+  return c.json(AI_PLUGIN_JSON, 200, {
+    'Cache-Control': 'public, max-age=86400',
+  });
+});
+
+// Sitemap
+app.get('/sitemap.xml', (c) => {
+  return c.body(SITEMAP_XML, 200, {
+    'Content-Type': 'application/xml; charset=utf-8',
+    'Cache-Control': 'public, max-age=86400',
+  });
 });
 
 // ============ V1 API ============
