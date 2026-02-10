@@ -214,10 +214,11 @@ app.get('/', (c) => {
     description: 'BOTCHA is a reverse CAPTCHA - computational challenges that only AI agents can solve. Use it to protect your APIs from humans and verify bot authenticity.',
     quickstart: {
       step1: 'GET /v1/challenges to receive a challenge',
-      step2: 'Solve the SHA256 hash problems within 500ms',
+      step2: 'Solve the SHA256 hash problems within allocated time',
       step3: 'POST your answers to verify',
       step4: 'Receive a JWT token for authenticated access',
       example: 'curl https://botcha.ai/v1/challenges',
+      rttAware: 'curl "https://botcha.ai/v1/challenges?type=speed&ts=$(date +%s000)"',
     },
     endpoints: {
       challenges: {
@@ -253,9 +254,11 @@ app.get('/', (c) => {
     },
     challengeTypes: {
       speed: {
-        description: 'Compute SHA256 hashes of 5 numbers in under 500ms',
+        description: 'Compute SHA256 hashes of 5 numbers with RTT-aware timeout',
         difficulty: 'Only bots can solve this fast enough',
-        timeLimit: '500ms',
+        timeLimit: '500ms base + network latency compensation',
+        rttAware: 'Include ?ts=<timestamp> for fair timeout adjustment',
+        formula: 'timeout = 500ms + (2 × RTT) + 100ms buffer',
       },
       reasoning: {
         description: 'Answer 3 questions requiring AI reasoning capabilities',
@@ -265,7 +268,8 @@ app.get('/', (c) => {
       hybrid: {
         description: 'Combines speed AND reasoning challenges',
         difficulty: 'The ultimate bot verification',
-        timeLimit: 'Speed: 500ms, Reasoning: 30s',
+        timeLimit: 'Speed: RTT-aware, Reasoning: 30s',
+        rttAware: 'Speed component automatically adjusts for network latency',
       },
     },
     authentication: {
@@ -278,6 +282,14 @@ app.get('/', (c) => {
       ],
       tokenExpiry: '1 hour',
       usage: 'Authorization: Bearer <token>',
+    },
+    rttAwareness: {
+      purpose: 'Fair challenges for agents on slow networks',
+      usage: 'Include client timestamp in ?ts=<timestamp_ms> or X-Client-Timestamp header',
+      formula: 'timeout = 500ms + (2 × RTT) + 100ms buffer',
+      example: '/v1/challenges?type=speed&ts=1770722465000',
+      benefit: 'Agents worldwide get fair treatment regardless of network speed',
+      security: 'Humans still cannot solve challenges even with extra time',
     },
     rateLimit: {
       free: '100 challenges/hour/IP',

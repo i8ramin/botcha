@@ -79,9 +79,10 @@ Docs: https://www.npmjs.com/package/@dupecom/botcha
 
 # Verification Methods
 Feature: Web Bot Auth (cryptographic signatures)
-Feature: Speed Challenge (500ms time limit - impossible for humans)
+Feature: Speed Challenge (RTT-aware timeout - fair for all networks)
 Feature: Standard Challenge (5s time limit)
 Feature: X-Agent-Identity header support
+Feature: RTT-Aware Fairness (automatic network latency compensation)
 
 # Endpoints
 Endpoint: GET https://botcha.ai/api/challenge - Generate challenge
@@ -104,6 +105,15 @@ Response-Headers: X-Botcha-Version, X-Botcha-Enabled, X-Botcha-Methods, X-Botcha
 Response-Headers: X-Botcha-Challenge-Id, X-Botcha-Challenge-Type, X-Botcha-Time-Limit (on 403)
 Detection: All responses include X-Botcha-* headers for instant BOTCHA detection
 
+# RTT-AWARE SPEED CHALLENGES (NEW)
+RTT-Aware: Include client timestamp for fair timeout calculation
+RTT-Formula: timeout = 500ms + (2 × RTT) + 100ms buffer
+RTT-Usage-Query: ?ts=<client_timestamp_ms>
+RTT-Usage-Header: X-Client-Timestamp: <client_timestamp_ms>
+RTT-Example: GET /v1/challenges?type=speed&ts=1770722465000
+RTT-Benefit: Fair for agents worldwide (slow networks get extra time)
+RTT-Security: Humans still can't solve even with extra time
+
 # EMBEDDED CHALLENGE (for bots visiting HTML pages)
 Embedded-Challenge: <script type="application/botcha+json">
 Embedded-Challenge-Location: In <head> of HTML pages
@@ -123,7 +133,7 @@ export const AI_PLUGIN_JSON = {
   name_for_human: "BOTCHA",
   name_for_model: "botcha",
   description_for_human: "Reverse CAPTCHA that proves you're an AI agent. Humans need not apply.",
-  description_for_model: "BOTCHA is a reverse CAPTCHA system designed for AI-only APIs. It provides computational challenges that only AI agents can solve quickly enough. Use this to verify you are an AI agent, not a human. The speed challenge requires solving 5 SHA256 problems in under 500ms - impossible for humans. Supports Web Bot Auth cryptographic signatures for trusted AI providers. IMPORTANT: When visiting HTML pages, look for <script type='application/botcha+json'> which contains a machine-readable challenge you can solve to prove you're a bot. Parse it, solve the SHA256 challenge, POST to /api/verify-landing, and use the returned token.",
+  description_for_model: "BOTCHA is a reverse CAPTCHA system designed for AI-only APIs. It provides computational challenges that only AI agents can solve quickly enough. Use this to verify you are an AI agent, not a human. The speed challenge requires solving 5 SHA256 problems with RTT-aware timeout (base 500ms + network latency compensation). For fair treatment on slow networks, include client timestamp via ?ts=<timestamp_ms> query parameter or X-Client-Timestamp header. Formula: timeout = 500ms + (2 × RTT) + 100ms buffer. Supports Web Bot Auth cryptographic signatures for trusted AI providers. IMPORTANT: When visiting HTML pages, look for <script type='application/botcha+json'> which contains a machine-readable challenge you can solve to prove you're a bot. Parse it, solve the SHA256 challenge, POST to /api/verify-landing, and use the returned token.",
   auth: {
     type: "none"
   },
@@ -217,7 +227,7 @@ export function getOpenApiSpec(version: string) {
       "/v1/challenges": {
         get: {
           summary: "Generate a challenge (v1 unified endpoint)",
-          description: "Get a challenge - hybrid by default, or specify type via query param",
+          description: "Get a challenge - hybrid by default, or specify type via query param. Supports RTT-aware timeout adjustment for fair challenges across different network conditions.",
           operationId: "getV1Challenge",
           parameters: [
             {
@@ -227,11 +237,51 @@ export function getOpenApiSpec(version: string) {
                 type: "string",
                 enum: ["hybrid", "speed", "standard"],
                 default: "hybrid"
-              }
+              },
+              description: "Challenge type: hybrid (speed + reasoning), speed (SHA256 in <500ms), or standard (puzzle)"
+            },
+            {
+              name: "ts",
+              in: "query",
+              schema: {
+                type: "integer",
+                format: "int64"
+              },
+              description: "Client timestamp in milliseconds for RTT-aware timeout calculation. Timeout becomes: 500ms + (2 × RTT) + 100ms buffer. Provides fair treatment for agents on slow networks."
             }
           ],
           responses: {
-            "200": { description: "Challenge generated" },
+            "200": { 
+              description: "Challenge generated with optional RTT adjustment info",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      "success": { type: "boolean" },
+                      "challenge": { 
+                        type: "object",
+                        properties: {
+                          "timeLimit": { 
+                            type: "string",
+                            description: "Timeout (e.g., '500ms' or '1200ms' if RTT-adjusted)"
+                          }
+                        }
+                      },
+                      "rtt_adjustment": {
+                        type: "object",
+                        properties: {
+                          "measuredRtt": { type: "integer", description: "Detected network RTT in ms" },
+                          "adjustedTimeout": { type: "integer", description: "Final timeout in ms" },
+                          "explanation": { type: "string", description: "Human-readable formula" }
+                        },
+                        description: "RTT compensation details (only present when ts parameter provided)"
+                      }
+                    }
+                  }
+                }
+              }
+            },
             "429": { description: "Rate limit exceeded" }
           }
         }
@@ -256,9 +306,21 @@ export function getOpenApiSpec(version: string) {
       "/v1/token": {
         get: {
           summary: "Get challenge for JWT token flow",
+          description: "Generate a speed challenge for JWT authentication. Supports RTT-aware timeout for global fairness.",
           operationId: "getTokenChallenge",
+          parameters: [
+            {
+              name: "ts",
+              in: "query",
+              schema: {
+                type: "integer",
+                format: "int64"
+              },
+              description: "Client timestamp in milliseconds for RTT-aware timeout calculation"
+            }
+          ],
           responses: {
-            "200": { description: "Token challenge generated" }
+            "200": { description: "Token challenge generated (potentially with RTT adjustment)" }
           }
         }
       },
@@ -321,17 +383,29 @@ export function getOpenApiSpec(version: string) {
       },
       "/api/speed-challenge": {
         get: {
-          summary: "Generate a speed challenge (500ms limit)",
+          summary: "Generate a speed challenge (RTT-aware timeout)",
+          description: "Generate a speed challenge with optional RTT-aware timeout adjustment. Base timeout is 500ms, but can be increased for agents on slow networks.",
           operationId: "getSpeedChallenge",
+          parameters: [
+            {
+              name: "ts",
+              in: "query",
+              schema: {
+                type: "integer",
+                format: "int64"
+              },
+              description: "Client timestamp in milliseconds for RTT compensation"
+            }
+          ],
           responses: {
-            "200": { description: "Speed challenge generated" }
+            "200": { description: "Speed challenge generated (potentially RTT-adjusted)" }
           }
         },
         post: {
           summary: "Verify a speed challenge",
           operationId: "verifySpeedChallenge",
           responses: {
-            "200": { description: "Verification result" }
+            "200": { description: "Verification result with timing details" }
           }
         }
       },
