@@ -30,6 +30,14 @@ jobs:
       - name: Install build dependencies
         run: pip install build
 
+      - name: Sync version from release tag
+        if: github.event_name == 'release'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Setting Python package version to $VERSION"
+          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+          grep '^version' pyproject.toml
+
       - name: Build package
         run: python -m build
 
@@ -56,3 +64,5 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
