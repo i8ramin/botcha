@@ -89,6 +89,7 @@ Feature: Audience Claims (tokens scoped to specific services)
 Feature: Client IP Binding (optional token-to-IP binding)
 Feature: Token Revocation (invalidate tokens before expiry)
 Feature: Server-Side Verification SDK (@botcha/verify for TS, botcha-verify for Python)
+Feature: Multi-Tenant API Keys (per-app isolation, rate limiting, and token scoping)
 
 # Endpoints
 # Challenge Endpoints
@@ -104,6 +105,10 @@ Endpoint: GET https://botcha.ai/v1/token - Get challenge for JWT token flow
 Endpoint: POST https://botcha.ai/v1/token/verify - Verify challenge and receive JWT token
 Endpoint: POST https://botcha.ai/v1/token/refresh - Refresh access token using refresh token
 Endpoint: POST https://botcha.ai/v1/token/revoke - Revoke a token (access or refresh)
+
+# Multi-Tenant Endpoints
+Endpoint: POST https://botcha.ai/v1/apps - Create new app (returns app_id + app_secret)
+Endpoint: GET https://botcha.ai/v1/apps/:id - Get app info (without secret)
 
 # Legacy Endpoints
 Endpoint: GET https://botcha.ai/api/challenge - Generate standard challenge
@@ -148,6 +153,15 @@ RTT-Usage-Header: X-Client-Timestamp: <client_timestamp_ms>
 RTT-Example: GET /v1/challenges?type=speed&ts=1770722465000
 RTT-Benefit: Fair for agents worldwide (slow networks get extra time)
 RTT-Security: Humans still can't solve even with extra time
+
+# MULTI-TENANT API KEYS
+Multi-Tenant: Create apps with unique app_id for isolation
+Multi-Tenant-Create: POST /v1/apps → {app_id, app_secret} (secret only shown once!)
+Multi-Tenant-Usage: Add ?app_id=<your_app_id> to any challenge/token endpoint
+Multi-Tenant-SDK-TS: new BotchaClient({ appId: 'app_abc123' })
+Multi-Tenant-SDK-Python: BotchaClient(app_id='app_abc123')
+Multi-Tenant-Rate-Limit: Each app gets isolated rate limit bucket
+Multi-Tenant-Token-Claim: Tokens include app_id claim when app_id provided
 
 # EMBEDDED CHALLENGE (for bots visiting HTML pages)
 Embedded-Challenge: <script type="application/botcha+json">
@@ -289,6 +303,14 @@ export function getOpenApiSpec(version: string) {
                 format: "int64"
               },
               description: "Client timestamp in milliseconds for RTT-aware timeout calculation. Timeout becomes: 500ms + (2 × RTT) + 100ms buffer. Provides fair treatment for agents on slow networks."
+            },
+            {
+              name: "app_id",
+              in: "query",
+              schema: {
+                type: "string"
+              },
+              description: "Multi-tenant app ID for per-app isolation and rate limiting. If provided, the resulting token will include an app_id claim."
             }
           ],
           responses: {
@@ -358,6 +380,14 @@ export function getOpenApiSpec(version: string) {
                 format: "int64"
               },
               description: "Client timestamp in milliseconds for RTT-aware timeout calculation"
+            },
+            {
+              name: "app_id",
+              in: "query",
+              schema: {
+                type: "string"
+              },
+              description: "Multi-tenant app ID. Tokens will include app_id claim for per-app isolation."
             }
           ],
           responses: {
@@ -531,6 +561,63 @@ export function getOpenApiSpec(version: string) {
           responses: {
             "200": { description: "Access granted" },
             "401": { description: "Unauthorized" }
+          }
+        }
+      },
+      "/v1/apps": {
+        post: {
+          summary: "Create a new multi-tenant app",
+          description: "Create a new app with unique app_id and app_secret for multi-tenant isolation. The app_secret is SHA-256 hashed and only returned once.",
+          operationId: "createApp",
+          responses: {
+            "200": {
+              description: "App created successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      "app_id": { type: "string", description: "Unique app identifier" },
+                      "app_secret": { type: "string", description: "Secret key (only shown once!)" },
+                      "warning": { type: "string", description: "Warning to save secret" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/v1/apps/{id}": {
+        get: {
+          summary: "Get app information",
+          description: "Retrieve app details by app_id. The app_secret is NOT included in the response.",
+          operationId: "getApp",
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "The app_id to retrieve"
+            }
+          ],
+          responses: {
+            "200": {
+              description: "App information",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      "app_id": { type: "string" },
+                      "created_at": { type: "string", format: "date-time" }
+                    }
+                  }
+                }
+              }
+            },
+            "404": { description: "App not found" }
           }
         }
       }

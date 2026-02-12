@@ -490,6 +490,16 @@ async def test_agent_identity_sets_user_agent():
 
 
 @pytest.mark.asyncio
+async def test_app_id_parameter():
+    """Test that app_id parameter is stored correctly."""
+    client = BotchaClient(app_id="test-app-123")
+
+    assert client.app_id == "test-app-123"
+
+    await client.close()
+
+
+@pytest.mark.asyncio
 @respx.mock
 async def test_token_parsing_with_invalid_jwt():
     """Test that invalid JWT still works with default 1hr expiry."""
@@ -874,3 +884,192 @@ async def test_close_clears_refresh_token():
     assert client._token is None
     assert client._refresh_token is None
     assert client._token_expires_at == 0
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_app_id_in_get_token_query_param():
+    """Test that app_id is passed as query parameter in get_token()."""
+    fake_token = make_fake_jwt()
+
+    # Mock GET /v1/token with app_id query param
+    get_route = respx.get(
+        "https://botcha.ai/v1/token", params={"app_id": "test-app-123"}
+    ).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": "test-challenge-id",
+                "problems": [123456],
+                "timeLimit": 500,
+            },
+        )
+    )
+
+    # Mock POST /v1/token/verify
+    post_route = respx.post("https://botcha.ai/v1/token/verify").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "verified": True,
+                "token": fake_token,
+                "solveTimeMs": 42.5,
+            },
+        )
+    )
+
+    async with BotchaClient(app_id="test-app-123") as client:
+        token = await client.get_token()
+
+        assert token == fake_token
+        assert get_route.called
+
+        # Verify app_id was sent in POST body
+        request = post_route.calls.last.request
+        body = json.loads(request.content)
+        assert "app_id" in body
+        assert body["app_id"] == "test-app-123"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_app_id_in_verify_request_body():
+    """Test that app_id is included in POST /v1/token/verify body."""
+    fake_token = make_fake_jwt()
+
+    # Mock GET /v1/token
+    respx.get("https://botcha.ai/v1/token").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": "test-challenge-id",
+                "problems": [123456],
+                "timeLimit": 500,
+            },
+        )
+    )
+
+    # Mock POST /v1/token/verify
+    verify_route = respx.post("https://botcha.ai/v1/token/verify").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "verified": True,
+                "token": fake_token,
+                "solveTimeMs": 42.5,
+            },
+        )
+    )
+
+    async with BotchaClient(app_id="my-app") as client:
+        await client.get_token()
+
+        # Verify app_id was sent in body
+        request = verify_route.calls.last.request
+        body = json.loads(request.content)
+        assert body["app_id"] == "my-app"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_app_id_in_inline_challenge_headers():
+    """Test that app_id is included as X-Botcha-App-Id header in inline challenge retry."""
+    fake_token = make_fake_jwt()
+
+    # Mock token endpoints
+    respx.get("https://botcha.ai/v1/token").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": "test-challenge-id",
+                "problems": [123456],
+                "timeLimit": 500,
+            },
+        )
+    )
+
+    respx.post("https://botcha.ai/v1/token/verify").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "verified": True,
+                "token": fake_token,
+                "solveTimeMs": 42.5,
+            },
+        )
+    )
+
+    # Mock API endpoint - returns 403 with challenge first, then 200
+    api_call_count = 0
+
+    def api_handler(request):
+        nonlocal api_call_count
+        api_call_count += 1
+
+        if api_call_count == 1:
+            return httpx.Response(
+                403,
+                json={
+                    "error": "Challenge required",
+                    "challenge": {
+                        "id": "inline-challenge-id",
+                        "problems": [111111, 222222],
+                    },
+                },
+            )
+
+        # On second call, verify app_id header was sent
+        assert "X-Botcha-App-Id" in request.headers
+        assert request.headers["X-Botcha-App-Id"] == "test-app-123"
+
+        return httpx.Response(200, json={"result": "success"})
+
+    respx.get("https://api.example.com/data").mock(side_effect=api_handler)
+
+    async with BotchaClient(app_id="test-app-123") as client:
+        response = await client.fetch("https://api.example.com/data")
+
+        # Should succeed after solving challenge
+        assert response.status_code == 200
+        assert api_call_count == 2
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_backward_compatibility_no_app_id():
+    """Test that requests work correctly without app_id (backward compatibility)."""
+    fake_token = make_fake_jwt()
+
+    # Mock GET /v1/token (should not have app_id param)
+    get_route = respx.get("https://botcha.ai/v1/token").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": "test-challenge-id",
+                "problems": [123456],
+                "timeLimit": 500,
+            },
+        )
+    )
+
+    # Mock POST /v1/token/verify
+    verify_route = respx.post("https://botcha.ai/v1/token/verify").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "verified": True,
+                "token": fake_token,
+                "solveTimeMs": 42.5,
+            },
+        )
+    )
+
+    async with BotchaClient() as client:
+        token = await client.get_token()
+
+        assert token == fake_token
+
+        # Verify app_id was NOT sent
+        request = verify_route.calls.last.request
+        body = json.loads(request.content)
+        assert "app_id" not in body

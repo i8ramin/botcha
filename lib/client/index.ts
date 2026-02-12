@@ -50,6 +50,7 @@ export class BotchaClient {
   private agentIdentity: string;
   private maxRetries: number;
   private autoToken: boolean;
+  private appId?: string;
   private opts: BotchaClientOptions;
   private cachedToken: string | null = null;
   private _refreshToken: string | null = null;
@@ -61,6 +62,7 @@ export class BotchaClient {
     this.agentIdentity = options.agentIdentity || `BotchaClient/${SDK_VERSION}`;
     this.maxRetries = options.maxRetries || 3;
     this.autoToken = options.autoToken !== undefined ? options.autoToken : true;
+    this.appId = options.appId;
   }
 
   /**
@@ -96,7 +98,10 @@ export class BotchaClient {
     }
 
     // Step 1: Get challenge from GET /v1/token
-    const challengeRes = await fetch(`${this.baseUrl}/v1/token`, {
+    const tokenUrl = this.appId 
+      ? `${this.baseUrl}/v1/token?app_id=${encodeURIComponent(this.appId)}`
+      : `${this.baseUrl}/v1/token`;
+    const challengeRes = await fetch(tokenUrl, {
       headers: { 'User-Agent': this.agentIdentity },
     });
 
@@ -126,6 +131,11 @@ export class BotchaClient {
     // Include audience if specified
     if (this.opts.audience) {
       verifyBody.audience = this.opts.audience;
+    }
+    
+    // Include app_id if specified
+    if (this.appId) {
+      verifyBody.app_id = this.appId;
     }
 
     const verifyRes = await fetch(`${this.baseUrl}/v1/token/verify`, {
@@ -220,7 +230,10 @@ export class BotchaClient {
    * Get and solve a challenge from BOTCHA service
    */
   async solveChallenge(): Promise<{ id: string; answers: string[] }> {
-    const res = await fetch(`${this.baseUrl}/api/speed-challenge`, {
+    const challengeUrl = this.appId
+      ? `${this.baseUrl}/api/speed-challenge?app_id=${encodeURIComponent(this.appId)}`
+      : `${this.baseUrl}/api/speed-challenge`;
+    const res = await fetch(challengeUrl, {
       headers: { 'User-Agent': this.agentIdentity },
     });
 
@@ -385,12 +398,19 @@ export class BotchaClient {
   async createHeaders(): Promise<Record<string, string>> {
     const { id, answers } = await this.solveChallenge();
     
-    return {
+    const headers: Record<string, string> = {
       'X-Botcha-Id': id,
       'X-Botcha-Challenge-Id': id,
       'X-Botcha-Answers': JSON.stringify(answers),
       'User-Agent': this.agentIdentity,
     };
+    
+    // Include X-Botcha-App-Id header if appId is set
+    if (this.appId) {
+      headers['X-Botcha-App-Id'] = this.appId;
+    }
+    
+    return headers;
   }
 }
 

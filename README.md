@@ -31,6 +31,7 @@ Use cases:
 - 🔄 AI-to-AI marketplaces
 - 🎫 Bot verification systems
 - 🔐 Autonomous agent authentication
+- 🏢 Multi-tenant app isolation
 
 ## Install
 
@@ -160,6 +161,82 @@ async with BotchaClient(audience="https://api.example.com") as client:
 | `POST /v1/token/revoke` | Invalidate any token immediately |
 
 See **[JWT Security Guide](./doc/JWT-SECURITY.md)** for full request/response examples, `curl` commands, and server-side verification.
+
+## 🏢 Multi-Tenant API Keys
+
+BOTCHA supports **multi-tenant isolation** — create separate apps with unique API keys for different services or environments.
+
+### Why Multi-Tenant?
+
+- **Isolation**: Each app gets its own rate limits and analytics
+- **Security**: Tokens are scoped to specific apps via `app_id` claim
+- **Flexibility**: Different services can use the same BOTCHA instance
+- **Tracking**: Per-app usage analytics (coming soon)
+
+### Creating an App
+
+```bash
+# Create a new app
+curl -X POST https://botcha.ai/v1/apps
+
+# Returns (save the secret - it's only shown once!):
+{
+  "app_id": "app_abc123",
+  "app_secret": "sk_xyz789",
+  "warning": "Save your secret now. It won't be shown again."
+}
+```
+
+### Using Your App ID
+
+All challenge and token endpoints accept an optional `app_id` query parameter:
+
+```bash
+# Get challenge with app_id
+curl "https://botcha.ai/v1/challenges?app_id=app_abc123"
+
+# Get token with app_id
+curl "https://botcha.ai/v1/token?app_id=app_abc123"
+```
+
+When you solve a challenge with an `app_id`, the resulting token includes the `app_id` claim.
+
+### SDK Support
+
+**TypeScript:**
+
+```typescript
+import { BotchaClient } from '@dupecom/botcha/client';
+
+const client = new BotchaClient({
+  appId: 'app_abc123',  // All requests will include this app_id
+});
+
+const response = await client.fetch('https://api.example.com/agent-only');
+```
+
+**Python:**
+
+```python
+from botcha import BotchaClient
+
+async with BotchaClient(app_id="app_abc123") as client:
+    response = await client.fetch("https://api.example.com/agent-only")
+```
+
+### Rate Limiting
+
+Each app gets its own rate limit bucket:
+- Default rate limit: 100 requests/hour per app
+- Rate limit key: `rate:app:{app_id}`
+- Fail-open design: KV errors don't block requests
+
+### Get App Info
+
+```bash
+# Get app details (secret is NOT included)
+curl https://botcha.ai/v1/apps/app_abc123
+```
 
 ## 🔄 SSE Streaming Flow (AI-Native)
 

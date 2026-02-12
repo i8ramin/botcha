@@ -32,6 +32,7 @@ Nobody is building the agent-side identity layer. Everyone is building "block bo
 - **Token revocation** — `POST /v1/token/revoke` with KV-backed revocation list
 - **Token refresh** — `POST /v1/token/refresh` for seamless token renewal
 - **JTI (JWT ID)** — unique IDs on every token for revocation tracking
+- **Multi-tenant app isolation** — per-app rate limiting and token scoping
 
 #### Infrastructure
 - Cloudflare Workers deployment at botcha.ai
@@ -90,10 +91,15 @@ Every token gets a unique `jti` claim for revocation tracking and audit trail.
 
 ## Tier 2 — Platform Play (makes it a business)
 
-### Multi-tenant API keys
+### ✅ Multi-tenant API keys — SHIPPED (v0.8.0)
 **What:** Services sign up, get an app ID + secret. Embed BOTCHA into *their* APIs with their own config.
-**Why:** Transforms BOTCHA from a demo into a platform. This is the Stripe Connect moment.
-**How:** `POST /v1/apps` creates an app. App-specific challenge config, rate limits, analytics. Tokens are scoped to apps.
+**Status:** Built and tested. `POST /v1/apps` creates app with unique app_id and app_secret (SHA-256 hashed). All challenge/token endpoints accept `?app_id=` query param. Tokens include `app_id` claim. Per-app rate limiting via `rate:app:{app_id}` KV keys.
+**Implementation:**
+- `POST /v1/apps` → returns `{app_id, app_secret}` (secret only shown once)
+- `GET /v1/apps/:id` → get app info (without secret)
+- All endpoints accept `?app_id=` query param
+- SDK support: TypeScript (`appId` option), Python (`app_id` param)
+- Fail-open validation (KV errors don't block requests)
 **Effort:** Large
 
 ### ✅ Server-side verification SDK — SHIPPED (v0.1.0)

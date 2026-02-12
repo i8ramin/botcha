@@ -20,11 +20,22 @@ export interface RateLimitResult {
 
 /**
  * Check and enforce rate limits
+ * 
+ * @param kv - KV namespace for rate limit storage
+ * @param identifier - IP address (used when app_id is not provided)
+ * @param limit - Requests per hour limit (default: 100)
+ * @param app_id - Optional app ID for app-scoped rate limiting
+ * 
+ * When app_id is provided, rate limiting is scoped to the app (uses 'rate:app:{app_id}' key).
+ * When app_id is not provided, rate limiting is scoped to IP (uses 'ratelimit:{ip}' key).
+ * 
+ * App-scoped rate limiting takes precedence over IP-based rate limiting.
  */
 export async function checkRateLimit(
   kv: KVNamespace | undefined,
   identifier: string,
-  limit: number = 100
+  limit: number = 100,
+  app_id?: string
 ): Promise<RateLimitResult> {
   if (!kv) {
     // No KV = no rate limiting (local dev)
@@ -35,7 +46,8 @@ export async function checkRateLimit(
     };
   }
 
-  const key = `ratelimit:${identifier}`;
+  // Use app-scoped key if app_id provided, otherwise use IP-based key
+  const key = app_id ? `rate:app:${app_id}` : `ratelimit:${identifier}`;
   const now = Date.now();
   const windowStart = now - 3600000; // 1 hour ago
 

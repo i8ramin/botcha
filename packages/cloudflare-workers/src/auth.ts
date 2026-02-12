@@ -32,6 +32,7 @@ export interface BotchaTokenPayload {
   solveTime: number; // how fast they solved it (ms)
   aud?: string; // optional audience claim
   client_ip?: string; // optional client IP binding
+  app_id?: string; // optional app ID (multi-tenant)
 }
 
 /**
@@ -44,6 +45,7 @@ export interface BotchaRefreshTokenPayload {
   jti: string; // JWT ID for revocation
   type: 'botcha-refresh';
   solveTime: number; // how fast they solved it (ms)
+  app_id?: string; // optional app ID (multi-tenant)
 }
 
 /**
@@ -62,6 +64,7 @@ export interface TokenCreationResult {
 export interface TokenGenerationOptions {
   aud?: string; // optional audience claim
   clientIp?: string; // optional client IP for binding
+  app_id?: string; // optional app ID (multi-tenant)
 }
 
 /**
@@ -98,6 +101,9 @@ export async function generateToken(
   if (options?.clientIp) {
     accessTokenPayload.client_ip = options.clientIp;
   }
+  if (options?.app_id) {
+    accessTokenPayload.app_id = options.app_id;
+  }
 
   const accessToken = await new SignJWT(accessTokenPayload)
     .setProtectedHeader({ alg: 'HS256' })
@@ -107,11 +113,18 @@ export async function generateToken(
     .sign(secretKey);
 
   // Refresh token: 1 hour
-  const refreshToken = await new SignJWT({
+  const refreshTokenPayload: Record<string, any> = {
     type: 'botcha-refresh',
     solveTime: solveTimeMs,
     jti: refreshJti,
-  })
+  };
+  
+  // Include app_id in refresh token if provided
+  if (options?.app_id) {
+    refreshTokenPayload.app_id = options.app_id;
+  }
+  
+  const refreshToken = await new SignJWT(refreshTokenPayload)
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(challengeId)
     .setIssuedAt()
@@ -119,7 +132,7 @@ export async function generateToken(
     .sign(secretKey);
 
   // Store refresh token JTI in KV if env provided (for revocation tracking)
-  // Also store aud and client_ip so they carry over on refresh
+  // Also store aud, client_ip, and app_id so they carry over on refresh
   if (env?.CHALLENGES) {
     try {
       const refreshData: Record<string, any> = { sub: challengeId, iat: Date.now() };
@@ -128,6 +141,9 @@ export async function generateToken(
       }
       if (options?.clientIp) {
         refreshData.client_ip = options.clientIp;
+      }
+      if (options?.app_id) {
+        refreshData.app_id = options.app_id;
       }
       await env.CHALLENGES.put(
         `refresh:${refreshJti}`,
@@ -214,9 +230,10 @@ export async function refreshAccessToken(
       }
     }
 
-    // Check if refresh token exists in KV and retrieve stored claims (aud, client_ip)
+    // Check if refresh token exists in KV and retrieve stored claims (aud, client_ip, app_id)
     let storedAud: string | undefined;
     let storedClientIp: string | undefined;
+    let storedAppId: string | undefined;
     if (jti) {
       try {
         const storedToken = await env.CHALLENGES.get(`refresh:${jti}`);
@@ -231,6 +248,7 @@ export async function refreshAccessToken(
           const storedData = JSON.parse(storedToken);
           storedAud = storedData.aud;
           storedClientIp = storedData.client_ip;
+          storedAppId = storedData.app_id;
         } catch {
           // Ignore parse errors on legacy KV entries
         }
@@ -251,11 +269,15 @@ export async function refreshAccessToken(
     // Carry over claims: prefer explicit options, fall back to stored KV values
     const effectiveAud = options?.aud || storedAud;
     const effectiveClientIp = options?.clientIp || storedClientIp;
+    const effectiveAppId = options?.app_id || storedAppId || (payload.app_id as string | undefined);
     if (effectiveAud) {
       accessTokenPayload.aud = effectiveAud;
     }
     if (effectiveClientIp) {
       accessTokenPayload.client_ip = effectiveClientIp;
+    }
+    if (effectiveAppId) {
+      accessTokenPayload.app_id = effectiveAppId;
     }
 
     const accessToken = await new SignJWT(accessTokenPayload)
@@ -365,6 +387,7 @@ export async function verifyToken(
         solveTime: payload.solveTime as number,
         aud: payload.aud as string | undefined,
         client_ip: payload.client_ip as string | undefined,
+        app_id: payload.app_id as string | undefined,
       },
     };
   } catch (error) {

@@ -350,6 +350,97 @@ describe('BotchaClient - Token Flow', () => {
         'Invalid challenge problems format'
       );
     });
+
+    test('token with app_id claim is properly verified', async () => {
+      const challengeResponse = {
+        success: true,
+        token: null,
+        challenge: {
+          id: 'token-challenge-123',
+          problems: [
+            { num: 123456, operation: 'sha256_first8' },
+          ],
+          timeLimit: 10000,
+          instructions: 'Solve to get token',
+        },
+      };
+
+      // Token with app_id claim
+      const verifyResponse = {
+        verified: true,
+        success: true,
+        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBfaWQiOiJhcHBfMTIzIn0.test',
+        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBfaWQiOiJhcHBfMTIzIn0.test',
+        refresh_token: 'refresh.token.here',
+        expires_in: 300,
+        refresh_expires_in: 3600,
+      };
+
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue(challengeResponse),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue(verifyResponse),
+        });
+
+      const client = new BotchaClient();
+      const token = await client.getToken();
+
+      expect(token).toBe('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBfaWQiOiJhcHBfMTIzIn0.test');
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    test('token without app_id claim maintains backward compatibility', async () => {
+      const challengeResponse = {
+        success: true,
+        token: null,
+        challenge: {
+          id: 'token-challenge-456',
+          problems: [
+            { num: 789012, operation: 'sha256_first8' },
+          ],
+          timeLimit: 10000,
+          instructions: 'Solve to get token',
+        },
+      };
+
+      // Token without app_id claim (backward compatible)
+      const verifyResponse = {
+        verified: true,
+        success: true,
+        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0In0.signature',
+        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0In0.signature',
+        refresh_token: 'refresh.token.legacy',
+        expires_in: 300,
+        refresh_expires_in: 3600,
+      };
+
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue(challengeResponse),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue(verifyResponse),
+        });
+
+      const client = new BotchaClient();
+      const token = await client.getToken();
+
+      expect(token).toBe('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0In0.signature');
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      
+      // Verify refresh token is stored correctly even without app_id
+      expect((client as any)._refreshToken).toBe('refresh.token.legacy');
+    });
   });
 
   describe('refreshToken()', () => {

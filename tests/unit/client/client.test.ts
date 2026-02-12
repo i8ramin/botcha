@@ -29,6 +29,14 @@ describe('BotchaClient', () => {
       expect((client as any).agentIdentity).toBe('CustomAgent/1.0.0');
       expect((client as any).maxRetries).toBe(5);
     });
+
+    test('accepts appId option', () => {
+      const client = new BotchaClient({
+        appId: 'test-app-123',
+      });
+      
+      expect((client as any).appId).toBe('test-app-123');
+    });
   });
 
   describe('solveChallenge()', () => {
@@ -386,6 +394,189 @@ describe('BotchaClient', () => {
       const answers = JSON.parse(headers['X-Botcha-Answers']);
       expect(Array.isArray(answers)).toBe(true);
       expect(answers).toHaveLength(1);
+    });
+
+    test('includes X-Botcha-App-Id header when appId is set', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        headers: {
+          get: vi.fn().mockReturnValue('application/json'),
+        },
+        json: vi.fn().mockResolvedValue({
+          success: true,
+          challenge: {
+            id: 'test-challenge-id',
+            problems: [{ num: 123456, operation: 'sha256_first8' }],
+            timeLimit: 10000,
+            instructions: 'Solve this',
+          },
+        }),
+      });
+
+      const client = new BotchaClient({ appId: 'test-app-123' });
+      const headers = await client.createHeaders();
+      
+      expect(headers).toHaveProperty('X-Botcha-App-Id');
+      expect(headers['X-Botcha-App-Id']).toBe('test-app-123');
+    });
+
+    test('does not include X-Botcha-App-Id header when appId is not set', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        headers: {
+          get: vi.fn().mockReturnValue('application/json'),
+        },
+        json: vi.fn().mockResolvedValue({
+          success: true,
+          challenge: {
+            id: 'test-challenge-id',
+            problems: [{ num: 123456, operation: 'sha256_first8' }],
+            timeLimit: 10000,
+            instructions: 'Solve this',
+          },
+        }),
+      });
+
+      const client = new BotchaClient();
+      const headers = await client.createHeaders();
+      
+      expect(headers).not.toHaveProperty('X-Botcha-App-Id');
+    });
+  });
+
+  describe('appId support', () => {
+    test('appId is passed as query param in getToken()', async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          json: vi.fn().mockResolvedValue({
+            challenge: {
+              id: 'test-challenge-id',
+              problems: [{ num: 123456, operation: 'sha256_first8' }],
+              timeLimit: 10000,
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          json: vi.fn().mockResolvedValue({
+            success: true,
+            verified: true,
+            access_token: 'test-token',
+            expires_in: 300,
+          }),
+        });
+
+      global.fetch = fetchMock;
+
+      const client = new BotchaClient({ appId: 'test-app-123' });
+      await client.getToken();
+
+      // Check first call (GET /v1/token)
+      expect(fetchMock.mock.calls[0][0]).toContain('app_id=test-app-123');
+    });
+
+    test('appId is passed in POST /v1/token/verify body', async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          json: vi.fn().mockResolvedValue({
+            challenge: {
+              id: 'test-challenge-id',
+              problems: [{ num: 123456, operation: 'sha256_first8' }],
+              timeLimit: 10000,
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          json: vi.fn().mockResolvedValue({
+            success: true,
+            verified: true,
+            access_token: 'test-token',
+            expires_in: 300,
+          }),
+        });
+
+      global.fetch = fetchMock;
+
+      const client = new BotchaClient({ appId: 'test-app-123' });
+      await client.getToken();
+
+      // Check second call (POST /v1/token/verify)
+      const verifyCall = fetchMock.mock.calls[1];
+      const body = JSON.parse(verifyCall[1].body);
+      expect(body.app_id).toBe('test-app-123');
+    });
+
+    test('appId is passed as query param in solveChallenge()', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        headers: {
+          get: vi.fn().mockReturnValue('application/json'),
+        },
+        json: vi.fn().mockResolvedValue({
+          success: true,
+          challenge: {
+            id: 'test-challenge-id',
+            problems: [{ num: 123456, operation: 'sha256_first8' }],
+            timeLimit: 10000,
+            instructions: 'Solve this',
+          },
+        }),
+      });
+
+      global.fetch = fetchMock;
+
+      const client = new BotchaClient({ appId: 'test-app-123' });
+      await client.solveChallenge();
+
+      expect(fetchMock.mock.calls[0][0]).toContain('app_id=test-app-123');
+    });
+
+    test('backward compatibility: no appId means no query param', async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          json: vi.fn().mockResolvedValue({
+            challenge: {
+              id: 'test-challenge-id',
+              problems: [{ num: 123456, operation: 'sha256_first8' }],
+              timeLimit: 10000,
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          json: vi.fn().mockResolvedValue({
+            success: true,
+            verified: true,
+            access_token: 'test-token',
+            expires_in: 300,
+          }),
+        });
+
+      global.fetch = fetchMock;
+
+      const client = new BotchaClient();
+      await client.getToken();
+
+      // Check first call - should NOT contain app_id
+      expect(fetchMock.mock.calls[0][0]).not.toContain('app_id');
+      
+      // Check second call - body should NOT contain app_id
+      const verifyCall = fetchMock.mock.calls[1];
+      const body = JSON.parse(verifyCall[1].body);
+      expect(body.app_id).toBeUndefined();
     });
   });
 });

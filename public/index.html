@@ -415,6 +415,26 @@ curl https://botcha.ai/api/speed-challenge
 # Try the protected endpoint (will fail without verification)
 curl https://botcha.ai/agent-only</code></pre>
       </div>
+      
+      <div class="box">
+        <h3>🏢 Multi-Tenant API Keys</h3>
+        <p style="line-height: 1.8;">
+          Create separate apps with unique API keys for different services or environments. 
+          Each app gets its own rate limits, analytics, and token scoping.
+        </p>
+        
+        <pre><code># Create a new app
+curl -X POST https://botcha.ai/v1/apps
+# Returns: {app_id: "app_abc123", app_secret: "sk_xyz789"}
+
+# Use app_id in challenges
+curl "https://botcha.ai/v1/challenges?app_id=app_abc123"</code></pre>
+        
+        <p style="margin-top: 1rem; color: #888;">
+          <strong>SDK Support:</strong> TypeScript (<code>appId</code> option) and Python (<code>app_id</code> param).
+          Tokens include <code>app_id</code> claim for verification.
+        </p>
+      </div>
     </div>
   </div>
   

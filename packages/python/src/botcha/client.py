@@ -35,6 +35,7 @@ class BotchaClient:
         max_retries: int = 3,
         auto_token: bool = True,
         audience: Optional[str] = None,
+        app_id: Optional[str] = None,
     ):
         """
         Initialize the BotchaClient.
@@ -45,12 +46,14 @@ class BotchaClient:
             max_retries: Maximum number of retries for failed requests (default: 3)
             auto_token: Automatically acquire and attach Bearer tokens (default: True)
             audience: Optional audience claim for token verification
+            app_id: Optional multi-tenant application ID
         """
         self.base_url = base_url.rstrip("/")
         self.agent_identity = agent_identity
         self.max_retries = max_retries
         self.auto_token = auto_token
         self.audience = audience
+        self.app_id = app_id
 
         self._token: Optional[str] = None
         self._token_expires_at: float = 0
@@ -99,7 +102,10 @@ class BotchaClient:
             return self._token
 
         # Step 1: Get challenge
-        challenge_response = await self._client.get(f"{self.base_url}/v1/token")
+        token_url = f"{self.base_url}/v1/token"
+        if self.app_id:
+            token_url += f"?app_id={self.app_id}"
+        challenge_response = await self._client.get(token_url)
         challenge_response.raise_for_status()
         challenge_data = challenge_response.json()
 
@@ -117,6 +123,8 @@ class BotchaClient:
         verify_payload = {"id": challenge.id, "answers": solutions}
         if self.audience:
             verify_payload["audience"] = self.audience
+        if self.app_id:
+            verify_payload["app_id"] = self.app_id
 
         verify_response = await self._client.post(
             f"{self.base_url}/v1/token/verify",
@@ -287,6 +295,8 @@ class BotchaClient:
                     # Retry with challenge headers
                     headers["X-Botcha-Challenge-Id"] = challenge["id"]
                     headers["X-Botcha-Answers"] = json.dumps(solutions)
+                    if self.app_id:
+                        headers["X-Botcha-App-Id"] = self.app_id
                     kwargs["headers"] = headers
 
                     response = await self._client.request("GET", url, **kwargs)

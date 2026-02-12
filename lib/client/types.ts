@@ -17,6 +17,8 @@ export interface BotchaClientOptions {
   autoToken?: boolean;
   /** Audience claim for token (optional) */
   audience?: string;
+  /** Multi-tenant application ID (optional) */
+  appId?: string;
 }
 
 export interface ChallengeResponse {

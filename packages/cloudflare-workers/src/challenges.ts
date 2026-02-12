@@ -25,6 +25,7 @@ export interface SpeedChallenge {
   baseTimeLimit: number;
   adjustedTimeLimit: number;
   rttMs?: number;
+  app_id?: string; // optional app ID (multi-tenant)
 }
 
 export interface StandardChallenge {
@@ -33,6 +34,7 @@ export interface StandardChallenge {
   expectedAnswer: string;
   expiresAt: number;
   difficulty: 'easy' | 'medium' | 'hard';
+  app_id?: string; // optional app ID (multi-tenant)
 }
 
 export interface ReasoningQuestion {
@@ -48,6 +50,7 @@ export interface ReasoningChallenge {
   expectedAnswers: Record<string, string[]>;
   issuedAt: number;
   expiresAt: number;
+  app_id?: string; // optional app ID (multi-tenant)
 }
 
 export interface ChallengeResult {
@@ -56,6 +59,7 @@ export interface ChallengeResult {
   solveTimeMs?: number;
   correctCount?: number;
   totalCount?: number;
+  app_id?: string; // propagated from challenge for token generation
 }
 
 export interface HybridChallenge {
@@ -64,6 +68,7 @@ export interface HybridChallenge {
   reasoningChallengeId: string;
   issuedAt: number;
   expiresAt: number;
+  app_id?: string; // optional app ID (multi-tenant)
 }
 
 // ============ STORAGE ============
@@ -146,7 +151,8 @@ async function deleteChallenge(
  */
 export async function generateSpeedChallenge(
   kv?: KVNamespace,
-  clientTimestamp?: number
+  clientTimestamp?: number,
+  app_id?: string
 ): Promise<{
   id: string;
   problems: { num: number; operation: string }[];
@@ -208,6 +214,7 @@ export async function generateSpeedChallenge(
     baseTimeLimit,
     adjustedTimeLimit,
     rttMs,
+    app_id,
   };
   
   // Store in KV with 5 minute TTL (safety buffer for time checks)
@@ -283,6 +290,7 @@ export async function verifySpeedChallenge(
   return { 
     valid: true, 
     solveTimeMs,
+    app_id: challenge.app_id,
     rttInfo: challenge.rttMs ? {
       measuredRtt: challenge.rttMs,
       adjustedTimeout: timeLimit,
@@ -303,7 +311,8 @@ const DIFFICULTY_CONFIG = {
  */
 export async function generateStandardChallenge(
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
-  kv?: KVNamespace
+  kv?: KVNamespace,
+  app_id?: string
 ): Promise<{
   id: string;
   puzzle: string;
@@ -329,6 +338,7 @@ export async function generateStandardChallenge(
     expectedAnswer: answer,
     expiresAt: Date.now() + config.timeLimit + 1000,
     difficulty,
+    app_id,
   };
   
   // Store in KV with 5 minute TTL
@@ -969,7 +979,7 @@ function generateQuestionBank(): ReasoningQuestion[] {
 /**
  * Generate a reasoning challenge: 3 random questions requiring LLM capabilities
  */
-export async function generateReasoningChallenge(kv?: KVNamespace): Promise<{
+export async function generateReasoningChallenge(kv?: KVNamespace, app_id?: string): Promise<{
   id: string;
   questions: { id: string; question: string; category: string }[];
   timeLimit: number;
@@ -1016,6 +1026,7 @@ export async function generateReasoningChallenge(kv?: KVNamespace): Promise<{
     expectedAnswers,
     issuedAt: Date.now(),
     expiresAt: Date.now() + timeLimit + 5000,
+    app_id,
   };
 
   // Store in KV or memory
@@ -1146,7 +1157,8 @@ const hybridChallenges = new Map<string, HybridChallenge>();
  */
 export async function generateHybridChallenge(
   kv?: KVNamespace,
-  clientTimestamp?: number
+  clientTimestamp?: number,
+  app_id?: string
 ): Promise<{
   id: string;
   speed: {
@@ -1169,8 +1181,8 @@ export async function generateHybridChallenge(
   const id = uuid();
 
   // Generate both sub-challenges (speed with RTT awareness)
-  const speedChallenge = await generateSpeedChallenge(kv, clientTimestamp);
-  const reasoningChallenge = await generateReasoningChallenge(kv);
+  const speedChallenge = await generateSpeedChallenge(kv, clientTimestamp, app_id);
+  const reasoningChallenge = await generateReasoningChallenge(kv, app_id);
 
   const hybrid: HybridChallenge = {
     id,
@@ -1178,6 +1190,7 @@ export async function generateHybridChallenge(
     reasoningChallengeId: reasoningChallenge.id,
     issuedAt: Date.now(),
     expiresAt: Date.now() + 35000,
+    app_id,
   };
 
   // Store in KV or memory

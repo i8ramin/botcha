@@ -30,6 +30,7 @@ Feature: Audience Claims (tokens scoped to specific services)
 Feature: Client IP Binding (optional token-to-IP binding)
 Feature: Token Revocation (invalidate tokens before expiry)
 Feature: Server-Side Verification SDK (@botcha/verify for TS, botcha-verify for Python)
+Feature: Multi-Tenant API Keys (per-app isolation, rate limiting, and token scoping)
 
 # Challenge Endpoints
 Endpoint: GET https://botcha.ai/v1/challenges - Generate challenge (hybrid by default)
@@ -44,6 +45,10 @@ Endpoint: GET https://botcha.ai/v1/token - Get challenge for JWT token flow
 Endpoint: POST https://botcha.ai/v1/token/verify - Verify challenge and receive JWT tokens
 Endpoint: POST https://botcha.ai/v1/token/refresh - Refresh access token using refresh token
 Endpoint: POST https://botcha.ai/v1/token/revoke - Revoke a token (access or refresh)
+
+# Multi-Tenant Endpoints
+Endpoint: POST https://botcha.ai/v1/apps - Create new app (returns app_id + app_secret)
+Endpoint: GET https://botcha.ai/v1/apps/:id - Get app info (without secret)
 
 # Legacy Endpoints
 Endpoint: GET https://botcha.ai/api/challenge - Generate standard challenge
@@ -88,6 +93,15 @@ RTT-Usage-Header: X-Client-Timestamp: <client_timestamp_ms>
 RTT-Example: GET /v1/challenges?type=speed&ts=1770722465000
 RTT-Benefit: Fair for agents worldwide (slow networks get extra time)
 RTT-Security: Humans still can't solve even with extra time
+
+# MULTI-TENANT API KEYS
+Multi-Tenant: Create apps with unique app_id for isolation
+Multi-Tenant-Create: POST /v1/apps → {app_id, app_secret} (secret only shown once!)
+Multi-Tenant-Usage: Add ?app_id=<your_app_id> to any challenge/token endpoint
+Multi-Tenant-SDK-TS: new BotchaClient({ appId: 'app_abc123' })
+Multi-Tenant-SDK-Python: BotchaClient(app_id='app_abc123')
+Multi-Tenant-Rate-Limit: Each app gets isolated rate limit bucket
+Multi-Tenant-Token-Claim: Tokens include app_id claim when app_id provided
 
 # EMBEDDED CHALLENGE (for bots visiting HTML pages)
 Embedded-Challenge: <script type="application/botcha+json">

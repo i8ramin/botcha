@@ -28,6 +28,7 @@ import { checkRateLimit, getClientIP } from './rate-limit';
 import { verifyBadge, generateBadgeSvg, generateBadgeHtml, createBadgeResponse } from './badge';
 import streamRoutes from './routes/stream';
 import { ROBOTS_TXT, AI_TXT, AI_PLUGIN_JSON, SITEMAP_XML, getOpenApiSpec } from './static';
+import { createApp, getApp } from './apps';
 import {
   type AnalyticsEngineDataset,
   trackChallengeGenerated,
@@ -41,6 +42,7 @@ import {
 type Bindings = {
   CHALLENGES: KVNamespace;
   RATE_LIMITS: KVNamespace;
+  APPS: KVNamespace;
   ANALYTICS?: AnalyticsEngineDataset;
   JWT_SECRET: string;
   BOTCHA_VERSION: string;
@@ -104,6 +106,29 @@ async function rateLimitMiddleware(c: Context<{ Bindings: Bindings; Variables: V
   }
 
   await next();
+}
+
+// Helper: Validate app_id against APPS KV (fail-open)
+async function validateAppId(
+  appId: string | undefined,
+  appsKV: KVNamespace
+): Promise<{ valid: boolean; error?: string }> {
+  if (!appId) {
+    // No app_id provided - valid (not required)
+    return { valid: true };
+  }
+
+  try {
+    const app = await getApp(appsKV, appId);
+    if (!app) {
+      return { valid: false, error: `App not found: ${appId}` };
+    }
+    return { valid: true };
+  } catch (error) {
+    // Fail-open: if KV is unavailable, log warning and proceed
+    console.warn(`Failed to validate app_id ${appId} (KV unavailable), proceeding:`, error);
+    return { valid: true };
+  }
 }
 
 // JWT verification middleware
@@ -245,6 +270,10 @@ app.get('/', (c) => {
         'POST /v1/token/revoke': 'Revoke a token (access or refresh)',
         'GET /agent-only': 'Protected endpoint (requires Bearer token)',
       },
+      apps: {
+        'POST /v1/apps': 'Create a new app with app_id and app_secret (multi-tenant)',
+        'GET /v1/apps/:id': 'Get app information by app_id (without secret)',
+      },
       badges: {
         'GET /badge/:id': 'Badge verification page (HTML)',
         'GET /badge/:id/image': 'Badge image (SVG)',
@@ -385,11 +414,24 @@ app.get('/v1/challenges', rateLimitMiddleware, async (c) => {
   const clientTimestampParam = c.req.query('ts') || c.req.header('x-client-timestamp');
   const clientTimestamp = clientTimestampParam ? parseInt(clientTimestampParam, 10) : undefined;
 
+  // Extract and validate optional app_id
+  const app_id = c.req.query('app_id');
+  if (app_id) {
+    const validation = await validateAppId(app_id, c.env.APPS);
+    if (!validation.valid) {
+      return c.json({
+        success: false,
+        error: 'INVALID_APP_ID',
+        message: validation.error || 'Invalid app_id',
+      }, 400);
+    }
+  }
+
   const baseUrl = new URL(c.req.url).origin;
   const clientIP = getClientIP(c.req.raw);
 
   if (type === 'hybrid') {
-    const challenge = await generateHybridChallenge(c.env.CHALLENGES, clientTimestamp);
+    const challenge = await generateHybridChallenge(c.env.CHALLENGES, clientTimestamp, app_id);
     
     // Track challenge generation
     const responseTime = Date.now() - startTime;
@@ -440,7 +482,7 @@ app.get('/v1/challenges', rateLimitMiddleware, async (c) => {
     
     return c.json(response);
   } else if (type === 'speed') {
-    const challenge = await generateSpeedChallenge(c.env.CHALLENGES, clientTimestamp);
+    const challenge = await generateSpeedChallenge(c.env.CHALLENGES, clientTimestamp, app_id);
     
     // Track challenge generation
     const responseTime = Date.now() - startTime;
@@ -479,7 +521,7 @@ app.get('/v1/challenges', rateLimitMiddleware, async (c) => {
     
     return c.json(response);
   } else {
-    const challenge = await generateStandardChallenge(difficulty, c.env.CHALLENGES);
+    const challenge = await generateStandardChallenge(difficulty, c.env.CHALLENGES, app_id);
     
     // Track challenge generation
     const responseTime = Date.now() - startTime;
@@ -634,7 +676,20 @@ app.get('/v1/token', rateLimitMiddleware, async (c) => {
   // Extract optional audience parameter
   const audience = c.req.query('audience');
   
-  const challenge = await generateSpeedChallenge(c.env.CHALLENGES, clientTimestamp);
+  // Extract and validate optional app_id
+  const app_id = c.req.query('app_id');
+  if (app_id) {
+    const validation = await validateAppId(app_id, c.env.APPS);
+    if (!validation.valid) {
+      return c.json({
+        success: false,
+        error: 'INVALID_APP_ID',
+        message: validation.error || 'Invalid app_id',
+      }, 400);
+    }
+  }
+  
+  const challenge = await generateSpeedChallenge(c.env.CHALLENGES, clientTimestamp, app_id);
   
   const response: any = {
     success: true,
@@ -663,8 +718,8 @@ app.get('/v1/token', rateLimitMiddleware, async (c) => {
 
 // Verify challenge and issue JWT token
 app.post('/v1/token/verify', async (c) => {
-  const body = await c.req.json<{ id?: string; answers?: string[]; audience?: string; bind_ip?: boolean }>();
-  const { id, answers, audience, bind_ip } = body;
+  const body = await c.req.json<{ id?: string; answers?: string[]; audience?: string; bind_ip?: boolean; app_id?: string }>();
+  const { id, answers, audience, bind_ip, app_id } = body;
 
   if (!id || !answers) {
     return c.json({
@@ -688,6 +743,7 @@ app.post('/v1/token/verify', async (c) => {
   const clientIp = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
 
   // Generate JWT tokens (access + refresh)
+  // Prefer app_id from request body, fall back to challenge's app_id (returned by verifySpeedChallenge)
   const tokenResult = await generateToken(
     id, 
     result.solveTimeMs || 0, 
@@ -696,6 +752,7 @@ app.post('/v1/token/verify', async (c) => {
     {
       aud: audience,
       clientIp: bind_ip ? clientIp : undefined,
+      app_id: app_id || result.app_id,
     }
   );
 
@@ -819,7 +876,20 @@ app.post('/v1/token/revoke', async (c) => {
 
 // Get reasoning challenge
 app.get('/v1/reasoning', rateLimitMiddleware, async (c) => {
-  const challenge = await generateReasoningChallenge(c.env.CHALLENGES);
+  // Extract and validate optional app_id
+  const app_id = c.req.query('app_id');
+  if (app_id) {
+    const validation = await validateAppId(app_id, c.env.APPS);
+    if (!validation.valid) {
+      return c.json({
+        success: false,
+        error: 'INVALID_APP_ID',
+        message: validation.error || 'Invalid app_id',
+      }, 400);
+    }
+  }
+  
+  const challenge = await generateReasoningChallenge(c.env.CHALLENGES, app_id);
   const baseUrl = new URL(c.req.url).origin;
   return c.json({
     success: true,
@@ -874,7 +944,20 @@ app.get('/v1/hybrid', rateLimitMiddleware, async (c) => {
   const clientTimestampParam = c.req.query('ts') || c.req.header('x-client-timestamp');
   const clientTimestamp = clientTimestampParam ? parseInt(clientTimestampParam, 10) : undefined;
   
-  const challenge = await generateHybridChallenge(c.env.CHALLENGES, clientTimestamp);
+  // Extract and validate optional app_id
+  const app_id = c.req.query('app_id');
+  if (app_id) {
+    const validation = await validateAppId(app_id, c.env.APPS);
+    if (!validation.valid) {
+      return c.json({
+        success: false,
+        error: 'INVALID_APP_ID',
+        message: validation.error || 'Invalid app_id',
+      }, 400);
+    }
+  }
+  
+  const challenge = await generateHybridChallenge(c.env.CHALLENGES, clientTimestamp, app_id);
   const baseUrl = new URL(c.req.url).origin;
   
   const warning = challenge.rttInfo 
@@ -1281,6 +1364,61 @@ app.get('/api/badge/:id', async (c) => {
     urls: {
       verify: `${baseUrl}/badge/${badgeId}`,
       image: `${baseUrl}/badge/${badgeId}/image`,
+    },
+  });
+});
+
+// ============ APPS API (Multi-Tenant) ============
+
+// Create a new app
+app.post('/v1/apps', async (c) => {
+  try {
+    const result = await createApp(c.env.APPS);
+    
+    return c.json({
+      success: true,
+      app_id: result.app_id,
+      app_secret: result.app_secret,
+      warning: '⚠️ Save your app_secret now — it cannot be retrieved again!',
+      created_at: new Date().toISOString(),
+      rate_limit: 100,
+    }, 201);
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'Failed to create app',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    }, 500);
+  }
+});
+
+// Get app info by ID
+app.get('/v1/apps/:id', async (c) => {
+  const app_id = c.req.param('id');
+  
+  if (!app_id) {
+    return c.json({
+      success: false,
+      error: 'Missing app ID',
+    }, 400);
+  }
+  
+  const app = await getApp(c.env.APPS, app_id);
+  
+  if (!app) {
+    return c.json({
+      success: false,
+      error: 'App not found',
+      message: `No app found with ID: ${app_id}`,
+    }, 404);
+  }
+  
+  return c.json({
+    success: true,
+    app: {
+      app_id: app.app_id,
+      created_at: new Date(app.created_at).toISOString(),
+      rate_limit: app.rate_limit,
     },
   });
 });

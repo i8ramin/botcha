@@ -125,6 +125,9 @@ const client = new BotchaClient({
   
   // Security
   audience: 'https://api.example.com', // Scope token to this service (optional)
+  
+  // Multi-tenant
+  appId: 'app_abc123', // Your app ID for isolation and tracking (optional)
 });
 ```
 
@@ -134,6 +137,82 @@ const client = new BotchaClient({
 - ✅ `maxRetries` - Maximum challenge solve attempts
 - ✅ `autoToken` - Enable automatic token acquisition
 - ✅ `audience` - Scope tokens to a specific service (prevents cross-service replay)
+- ✅ `appId` - Multi-tenant app ID for per-app isolation and rate limiting
+
+## Multi-Tenant API Keys (Shipped)
+
+BOTCHA supports **multi-tenant isolation** — create separate apps with unique API keys.
+
+### Creating an App
+
+```bash
+curl -X POST https://botcha.ai/v1/apps
+# Returns: {app_id: "app_abc123", app_secret: "sk_xyz789", warning: "..."}
+```
+
+**⚠️ Important:** The `app_secret` is only shown once. Save it securely.
+
+### Using App ID in SDK
+
+**TypeScript:**
+
+```typescript
+import { BotchaClient } from '@dupecom/botcha/client';
+
+const client = new BotchaClient({
+  appId: 'app_abc123',  // All requests include this app_id
+  audience: 'https://api.example.com',
+});
+
+// All challenges and tokens will be scoped to your app
+const response = await client.fetch('/protected');
+```
+
+**Python:**
+
+```python
+from botcha import BotchaClient
+
+async with BotchaClient(app_id="app_abc123") as client:
+    response = await client.fetch("https://api.example.com/protected")
+```
+
+### How It Works
+
+1. **Create app:** `POST /v1/apps` → receive `app_id` + `app_secret`
+2. **SDK sends app_id:** All challenge/token requests include `?app_id=your_id`
+3. **Token includes app_id:** JWT tokens have `app_id` claim for verification
+4. **Per-app rate limits:** Each app gets isolated rate limit bucket (`rate:app:{app_id}`)
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/v1/apps` | POST | Create new app (returns app_id + app_secret) |
+| `/v1/apps/:id` | GET | Get app info (secret NOT included) |
+
+All existing endpoints (`/v1/challenges`, `/v1/token`, etc.) accept `?app_id=` query param.
+
+### Constructor Parameters
+
+**TypeScript:**
+
+```typescript
+interface BotchaClientOptions {
+  appId?: string;  // Your multi-tenant app ID
+  // ... other options
+}
+```
+
+**Python:**
+
+```python
+def __init__(
+    self,
+    app_id: Optional[str] = None,  # Your multi-tenant app ID
+    # ... other params
+)
+```
 
 ## Token Rotation & Caching (Shipped)
 
@@ -307,6 +386,7 @@ The Python SDK mirrors the TypeScript API:
 - `max_retries` - Maximum retry attempts (default: 3)
 - `auto_token` - Enable automatic token acquisition (default: True)
 - `audience` - Scope tokens to a specific service (optional)
+- `app_id` - Multi-tenant app ID for per-app isolation (optional)
 
 **Implementation:** See `packages/python/` for full source code including SHA256 solver, async HTTP client (httpx), and type annotations.
 
