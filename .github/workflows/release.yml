@@ -61,6 +61,7 @@ jobs:
           echo "cli=$(node -p "require('./packages/cli/package.json').version")" >> $GITHUB_OUTPUT
           echo "cloudflare=$(node -p "require('./packages/cloudflare-workers/package.json').version")" >> $GITHUB_OUTPUT
           echo "langchain=$(node -p "require('./packages/langchain/package.json').version")" >> $GITHUB_OUTPUT
+          echo "python=$(grep '^version' packages/python/pyproject.toml | head -1 | sed 's/.*\"\(.*\)\"/\1/')" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -70,13 +71,121 @@ jobs:
           body: |
             ## Packages
             
-            | Package | Version |
-            |---------|---------|
-            | @dupecom/botcha | ${{ needs.check-version.outputs.version }} |
-            | @dupecom/botcha-cli | ${{ steps.versions.outputs.cli }} |
-            | @dupecom/botcha-cloudflare | ${{ steps.versions.outputs.cloudflare }} |
-            | @dupecom/botcha-langchain | ${{ steps.versions.outputs.langchain }} |
+            | Package | Version | Registry |
+            |---------|---------|----------|
+            | @dupecom/botcha | ${{ needs.check-version.outputs.version }} | [npm](https://npmjs.com/package/@dupecom/botcha) |
+            | @dupecom/botcha-cloudflare | ${{ steps.versions.outputs.cloudflare }} | [npm](https://npmjs.com/package/@dupecom/botcha-cloudflare) |
+            | botcha | ${{ steps.versions.outputs.python }} | [PyPI](https://pypi.org/project/botcha) |
+            | @dupecom/botcha-cli | ${{ steps.versions.outputs.cli }} | npm |
+            | @dupecom/botcha-langchain | ${{ steps.versions.outputs.langchain }} | npm |
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-npm:
+    needs: [check-version, create-release]
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build all packages
+        run: bun run build
+
+      - name: Publish @dupecom/botcha
+        id: publish-root
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED_VERSION=$(npm view "@dupecom/botcha" version 2>/dev/null || echo "")
+          if [ "$PUBLISHED_VERSION" = "$PKG_VERSION" ]; then
+            echo "::notice::@dupecom/botcha@$PKG_VERSION already published, skipping"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+          else
+            npm publish --access public
+            echo "status=published" >> $GITHUB_OUTPUT
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @dupecom/botcha-cloudflare
+        id: publish-cf
+        working-directory: packages/cloudflare-workers
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED_VERSION=$(npm view "@dupecom/botcha-cloudflare" version 2>/dev/null || echo "")
+          if [ "$PUBLISHED_VERSION" = "$PKG_VERSION" ]; then
+            echo "::notice::@dupecom/botcha-cloudflare@$PKG_VERSION already published, skipping"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+          else
+            npm publish --access public
+            echo "status=published" >> $GITHUB_OUTPUT
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## npm Publish Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | Version | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| @dupecom/botcha | $(node -p "require('./package.json').version") | ${{ steps.publish-root.outputs.status || 'failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| @dupecom/botcha-cloudflare | $(node -p "require('./packages/cloudflare-workers/package.json').version") | ${{ steps.publish-cf.outputs.status || 'failed' }} |" >> $GITHUB_STEP_SUMMARY
+
+  publish-pypi:
+    needs: [check-version, create-release]
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment: pypi
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        run: pip install build
+
+      - name: Sync version from root package.json
+        working-directory: packages/python
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          echo "Setting Python package version to $VERSION"
+          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+          grep '^version' pyproject.toml
+
+      - name: Build package
+        working-directory: packages/python
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/python/dist/
+          skip-existing: true
