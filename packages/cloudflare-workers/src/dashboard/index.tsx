@@ -15,6 +15,7 @@ import {
   requireDashboardAuth,
   handleLogin,
   handleLogout,
+  handleEmailLogin,
   renderLoginPage,
   renderDeviceCodePage,
   handleDeviceCodeRedeem,
@@ -54,6 +55,9 @@ dashboard.get('/login', renderLoginPage);
 
 // Login handler
 dashboard.post('/login', handleLogin);
+
+// Email login handler (sends device code to email)
+dashboard.post('/email-login', handleEmailLogin);
 
 // Logout handler
 dashboard.get('/logout', handleLogout);

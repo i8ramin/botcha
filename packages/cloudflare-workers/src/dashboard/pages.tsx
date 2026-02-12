@@ -6,7 +6,7 @@
  */
 
 import type { FC } from 'hono/jsx';
-import { DashboardLayout } from './layout';
+import { DashboardLayout, Card } from './layout';
 
 // ============ PERIOD SELECTOR ============
 
@@ -63,20 +63,17 @@ export const DashboardPage: FC<{ appId: string }> = ({ appId }) => {
       </p>
 
       {/* Overview Stats */}
-      <div class="card">
-        <div class="card-header"><h3><span>Overview</span></h3></div>
-        <div class="card-body"><div class="card-inner">
-          <PeriodSelector targetId="overview-content" endpoint="/dashboard/api/overview" />
-          <div
-            id="overview-content"
-            hx-get="/dashboard/api/overview?period=24h"
-            hx-trigger="load"
-            hx-swap="innerHTML"
-          >
-            <LoadingSkeleton />
-          </div>
-        </div></div>
-      </div>
+      <Card title="Overview">
+        <PeriodSelector targetId="overview-content" endpoint="/dashboard/api/overview" />
+        <div
+          id="overview-content"
+          hx-get="/dashboard/api/overview?period=24h"
+          hx-trigger="load"
+          hx-swap="innerHTML"
+        >
+          <LoadingSkeleton />
+        </div>
+      </Card>
 
       {/* Two-column grid for charts */}
       <div class="dashboard-grid">

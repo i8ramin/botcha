@@ -220,9 +220,10 @@ export async function generateSpeedChallenge(
   // Store in KV with 5 minute TTL (safety buffer for time checks)
   await storeChallenge(kv, id, challenge, 300);
   
+  const pipelineHint = ' Tip: compute all hashes and submit in a single HTTP request. Sequential shell commands will likely exceed the time limit.';
   const instructions = rttMs > 0
-    ? `Compute SHA256 of each number, return first 8 hex chars of each. Submit as array. You have ${adjustedTimeLimit}ms (adjusted for your ${rttMs}ms network latency).`
-    : 'Compute SHA256 of each number, return first 8 hex chars of each. Submit as array. You have 500ms.';
+    ? `Compute SHA256 of each number, return first 8 hex chars of each. Submit as array. You have ${adjustedTimeLimit}ms (adjusted for your ${rttMs}ms network latency).${pipelineHint}`
+    : `Compute SHA256 of each number, return first 8 hex chars of each. Submit as array. You have 500ms.${pipelineHint}`;
   
   return {
     id,
@@ -1201,8 +1202,8 @@ export async function generateHybridChallenge(
   }
 
   const instructions = speedChallenge.rttInfo 
-    ? `Solve ALL speed problems (SHA256) in <${speedChallenge.timeLimit}ms (RTT-adjusted) AND answer ALL reasoning questions. Submit both together.`
-    : 'Solve ALL speed problems (SHA256) in <500ms AND answer ALL reasoning questions. Submit both together.';
+    ? `Solve ALL speed problems (SHA256) in <${speedChallenge.timeLimit}ms (RTT-adjusted) AND answer ALL reasoning questions. Submit both together. Tip: compute all hashes in-process and submit in a single HTTP request.`
+    : 'Solve ALL speed problems (SHA256) in <500ms AND answer ALL reasoning questions. Submit both together. Tip: compute all hashes in-process and submit in a single HTTP request.';
 
   return {
     id,

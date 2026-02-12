@@ -9,6 +9,16 @@ Contact: https://github.com/dupe-com/botcha/issues
 Purpose: Prove you're a bot. Humans need not apply.
 Purpose: Reverse CAPTCHA system that only AI agents can pass.
 
+# Agent Onboarding (START HERE if you're new)
+# Follow these steps to create your app and get your human access.
+Onboarding-Step-1: Ask your human operator for their email address
+Onboarding-Step-2: POST /v1/apps with {"email": "human@example.com"} — saves app_id + app_secret (secret shown ONCE)
+Onboarding-Step-3: A 6-digit verification code is emailed to your human — ask them for it
+Onboarding-Step-4: POST /v1/apps/{app_id}/verify-email with {"code": "123456"} — enables account recovery
+Onboarding-Step-5: You are registered! Use app_id with all endpoints via ?app_id=your_app_id
+Onboarding-Step-6: To give your human dashboard access: POST /v1/auth/device-code with {"app_id": "..."}, solve the speed challenge, give them the BOTCHA-XXXX code to enter at /dashboard/code
+Onboarding-Step-7: Lost your secret? POST /v1/auth/recover with {"email": "..."} — recovery code emailed to verified address
+
 # API
 API: https://botcha.ai/openapi.json
 API-Type: REST

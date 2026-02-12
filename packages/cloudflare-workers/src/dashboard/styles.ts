@@ -5,7 +5,7 @@
  * Borrows structural patterns from turbopuffer (dot shadows, hard borders,
  * layered box-shadows on buttons) but with BOTCHA's own identity.
  *
- * JetBrains Mono · #f5f3f0 bg · #1a1a1a text · black accent · square corners · dot shadows
+ * JetBrains Mono · #ffffff bg · #1a1a1a text · black accent · square corners · dot shadows
  */
 
 export const DASHBOARD_CSS = `
@@ -14,7 +14,7 @@ export const DASHBOARD_CSS = `
 
   :root {
     /* ---- palette (black & white) ---- */
-    --bg:          #f5f3f0;
+    --bg:          #ffffff;
     --bg-card:     #ffffff;
     --bg-raised:   #eae8e4;
     --text:        #1a1a1a;
@@ -39,7 +39,7 @@ export const DASHBOARD_CSS = `
   html, body {
     height: 100%;
     font-family: var(--font);
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.6;
     background: var(--bg);
     color: var(--text);
@@ -154,22 +154,27 @@ export const DASHBOARD_CSS = `
   }
 
   .card-header h3 {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    z-index: 10;
+    top: 0.5rem;
+    left: 0.5rem;
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     line-height: 1;
     color: var(--text);
+    background: var(--bg);
     margin: 0;
+    padding: 0 0.5rem;
   }
 
-  .card-header h3 span {
-    position: relative;
-    z-index: 10;
-    margin-left: -0.5rem;
-    margin-right: -0.5rem;
-    background: var(--bg);
-    padding: 0 0.5rem;
+  .card-header h3 .card-title {
+  }
+
+  .card-header h3 .badge-inline {
   }
 
   .card-body {
@@ -477,7 +482,7 @@ export const DASHBOARD_CSS = `
 
   /* ============ Responsive ============ */
   @media (max-width: 768px) {
-    html, body { font-size: 13px; }
+    html, body { font-size: 14px; }
     .dashboard-main { padding: 1rem; }
     .nav-container { padding: 0.5rem 1rem; }
     .dashboard-grid { grid-template-columns: 1fr; gap: 1rem; }
@@ -538,9 +543,92 @@ export const DASHBOARD_CSS = `
   .empty-state-text { font-size: 0.8125rem; margin-bottom: 0.25rem; }
   .empty-state-subtext { font-size: 0.6875rem; color: var(--text-dim); }
 
+  /* ============ Auth pages ============ */
+  .ascii-logo {
+    text-align: center; margin-bottom: 2rem;
+    color: var(--text); font-size: 0.55rem; line-height: 1.2;
+    white-space: pre; font-weight: 400;
+  }
+
+  .badge-inline {
+    display: inline-block; font-size: 0.5625rem; font-weight: 700;
+    color: var(--text-muted); border: 1px solid var(--border-bright);
+    border-radius: 0; padding: 0.1rem 0.4rem;
+    margin-left: 0.5rem; vertical-align: middle;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+
+  .divider {
+    display: flex; align-items: center; gap: 0.75rem;
+    color: var(--text-dim); font-size: 0.6875rem;
+    margin: 1.5rem 0;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--border-bright);
+  }
+
+  .credentials-box {
+    background: var(--bg); border: 1px solid var(--accent-dim);
+    padding: 1rem; margin-bottom: 1rem;
+    font-size: 0.75rem; line-height: 1.8; word-break: break-all;
+  }
+  .credentials-box .label { color: var(--text-muted); }
+  .credentials-box .value { color: var(--text); font-weight: 700; }
+
+  .warning {
+    background: rgba(184,122,0,0.06); border: 1px solid var(--amber);
+    padding: 0.75rem; margin-bottom: 1rem;
+    font-size: 0.7rem; color: var(--amber);
+  }
+  .warning::before { content: '[!!] '; font-weight: 700; }
+
+  .error-message {
+    color: var(--red); margin: 0 0 1rem 0; font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgba(204,34,34,0.3);
+    background: var(--bg);
+  }
+  .error-message::before { content: '[ERR] '; font-weight: 700; }
+
+  .hint {
+    font-size: 0.6875rem; color: var(--text-muted); line-height: 1.6;
+    margin-top: 0.75rem;
+  }
+  .hint code {
+    color: var(--text); background: var(--bg-raised);
+    padding: 0.125rem 0.375rem; border: 1px solid var(--border);
+  }
+
+  .btn {
+    display: block; width: 100%; text-align: center; text-decoration: none;
+  }
+  .btn-secondary {
+    background: transparent; color: var(--text);
+    border-color: var(--border-bright);
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.05);
+  }
+  .btn-secondary:hover {
+    border-color: var(--accent); color: var(--accent);
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+  }
+
+  #create-result { display: none; }
+  #create-result.show { display: block; }
+  #create-btn.loading { opacity: 0.25; pointer-events: none; }
+
   /* ============ Scrollbar ============ */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg-raised); }
   ::-webkit-scrollbar-thumb { background: var(--border-bright); }
   ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* ============ Responsive (small screens) ============ */
+  @media (max-width: 480px) {
+    .ascii-logo { font-size: 0.4rem; }
+    .login-container { padding: 1rem; }
+    .card-inner { padding: 1rem; }
+  }
 `;

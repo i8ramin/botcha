@@ -67,6 +67,16 @@ Contact: https://github.com/dupe-com/botcha/issues
 Purpose: Prove you're a bot. Humans need not apply.
 Purpose: Reverse CAPTCHA system that only AI agents can pass.
 
+# Agent Onboarding (START HERE if you're new)
+# Follow these steps to create your app and get your human access.
+Onboarding-Step-1: Ask your human operator for their email address
+Onboarding-Step-2: POST /v1/apps with {"email": "human@example.com"} — saves app_id + app_secret (secret shown ONCE)
+Onboarding-Step-3: A 6-digit verification code is emailed to your human — ask them for it
+Onboarding-Step-4: POST /v1/apps/{app_id}/verify-email with {"code": "123456"} — enables account recovery
+Onboarding-Step-5: You are registered! Use app_id with all endpoints via ?app_id=your_app_id
+Onboarding-Step-6: To give your human dashboard access: POST /v1/auth/device-code with {"app_id": "..."}, solve the speed challenge, give them the BOTCHA-XXXX code to enter at /dashboard/code
+Onboarding-Step-7: Lost your secret? POST /v1/auth/recover with {"email": "..."} — recovery code emailed to verified address
+
 # API
 API: https://botcha.ai/openapi.json
 API-Type: REST
@@ -207,7 +217,7 @@ export const AI_PLUGIN_JSON = {
   name_for_human: "BOTCHA",
   name_for_model: "botcha",
   description_for_human: "Reverse CAPTCHA that proves you're an AI agent. Humans need not apply.",
-  description_for_model: "BOTCHA is a reverse CAPTCHA system designed for AI-only APIs. It provides computational challenges that only AI agents can solve quickly enough. Use this to verify you are an AI agent, not a human. The speed challenge requires solving 5 SHA256 problems with RTT-aware timeout (base 500ms + network latency compensation). For fair treatment on slow networks, include client timestamp via ?ts=<timestamp_ms> query parameter or X-Client-Timestamp header. Formula: timeout = 500ms + (2 × RTT) + 100ms buffer. Supports Web Bot Auth cryptographic signatures for trusted AI providers. IMPORTANT: When visiting HTML pages, look for <script type='application/botcha+json'> which contains a machine-readable challenge you can solve to prove you're a bot. Parse it, solve the SHA256 challenge, POST to /api/verify-landing, and use the returned token.",
+  description_for_model: "BOTCHA is a reverse CAPTCHA system designed for AI-only APIs. It provides computational challenges that only AI agents can solve quickly enough. Use this to verify you are an AI agent, not a human. ONBOARDING: 1) Ask your human for their email. 2) POST /v1/apps with {\"email\":\"...\"} to create your app (saves app_id + app_secret — secret shown ONCE). 3) Human receives a 6-digit code via email. 4) POST /v1/apps/{id}/verify-email with {\"code\":\"...\"} to verify. 5) Use app_id on all endpoints. 6) For human dashboard access: POST /v1/auth/device-code, solve challenge, give human the BOTCHA-XXXX code for /dashboard/code. CHALLENGES: The speed challenge requires solving 5 SHA256 problems with RTT-aware timeout (base 500ms + network latency compensation). For fair treatment on slow networks, include client timestamp via ?ts=<timestamp_ms> query parameter or X-Client-Timestamp header. Formula: timeout = 500ms + (2 × RTT) + 100ms buffer. RECOVERY: Lost your secret? POST /v1/auth/recover with {\"email\":\"...\"} and a recovery code is emailed. When visiting HTML pages, look for <script type='application/botcha+json'> which contains a machine-readable challenge you can solve.",
   auth: {
     type: "none"
   },
@@ -258,7 +268,7 @@ export function getOpenApiSpec(version: string) {
     info: {
       title: "BOTCHA - Reverse CAPTCHA for AI Agents",
       version,
-      description: "Prove you're a bot. Humans need not apply. A reverse CAPTCHA system that only AI agents can pass.",
+      description: "Prove you're a bot. Humans need not apply. A reverse CAPTCHA system that only AI agents can pass.\n\nONBOARDING: 1) Ask your human for their email. 2) POST /v1/apps with {\"email\": \"...\"} to get app_id + app_secret (secret shown once!). 3) Human receives 6-digit code via email — POST /v1/apps/{id}/verify-email with the code. 4) Use app_id with all endpoints. 5) For dashboard: POST /v1/auth/device-code, solve challenge, give human the BOTCHA-XXXX code for /dashboard/code.",
       contact: {
         name: "BOTCHA",
         url: "https://botcha.ai"

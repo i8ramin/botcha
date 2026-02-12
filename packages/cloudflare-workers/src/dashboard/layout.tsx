@@ -1,11 +1,55 @@
 /**
- * BOTCHA Dashboard Layout Components
- * Hono JSX components for HTML shells
+ * BOTCHA Dashboard Layout + Shared Components
+ * Hono JSX components for HTML shells and reusable UI pieces
  * Terminal / ASCII aesthetic
  */
 
 import type { FC, PropsWithChildren } from 'hono/jsx';
 import { DASHBOARD_CSS } from './styles';
+
+// ============ CARD COMPONENT ============
+
+/**
+ * Reusable card with Turbopuffer-style dotted drop shadow.
+ *
+ * Structure:
+ *   .card
+ *     .card-header  (title sits on the border line)
+ *     .card-body    (::before = dot shadow)
+ *       .card-inner (z-index: 1, white bg covers dots)
+ *
+ * Usage:
+ *   <Card title="Overview" badge="agent required">
+ *     ...content...
+ *   </Card>
+ */
+export const Card: FC<PropsWithChildren<{ title: string; badge?: string; class?: string }>> = ({
+  children,
+  title,
+  badge,
+  class: className,
+}) => {
+  return (
+    <div class={`card${className ? ` ${className}` : ''}`}>
+      <div class="card-header">
+        <h3>
+          <span class="card-title">{title}</span>
+          {badge && <span class="badge-inline">{badge}</span>}
+        </h3>
+      </div>
+      <div class="card-body">
+        <div class="card-inner">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Divider with centered text, used between sections on auth pages.
+ */
+export const Divider: FC<{ text: string }> = ({ text }) => (
+  <div class="divider">{text}</div>
+);
 
 /**
  * Main dashboard layout with navigation
@@ -68,7 +112,9 @@ export const LoginLayout: FC<PropsWithChildren<{ title?: string }>> = ({ childre
         <script src="https://unpkg.com/htmx.org@2.0.4" />
       </head>
       <body>
-        <div class="login-container">{children}</div>
+        <div class="login-container">
+          <div class="login-box">{children}</div>
+        </div>
       </body>
     </html>
   );

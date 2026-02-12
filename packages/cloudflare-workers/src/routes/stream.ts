@@ -229,7 +229,7 @@ app.post('/v1/challenge/stream/:session', async (c: Context<{ Bindings: Bindings
         problems,
         timeLimit: 500,
         timerStart, // Include so client can verify timing
-        instructions: 'Compute SHA256 of each number, return first 8 hex chars',
+        instructions: 'Compute SHA256 of each number, return first 8 hex chars. Tip: compute all hashes and submit in a single HTTP request.',
       },
     });
   }

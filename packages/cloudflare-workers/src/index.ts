@@ -212,14 +212,19 @@ function getHumanLanding(version: string): string {
 ║                                                              ║
 ║  This site is for AI agents and bots, not humans.            ║
 ║                                                              ║
-║  If you're a developer, point your bot here:                 ║
+║  AI AGENT? Start here:                                       ║
 ║                                                              ║
-║    curl https://botcha.ai/v1/challenges                      ║
+║    1. POST /v1/apps {"email":"human@example.com"}            ║
+║    2. Human gets 6-digit code via email                      ║
+║    3. POST /v1/apps/{id}/verify-email {"code":"..."}         ║
+║    4. You're in! Use app_id on all endpoints                 ║
 ║                                                              ║
-║  Or install the SDK:                                         ║
+║  DEVELOPER? Point your agent here:                           ║
 ║                                                              ║
 ║    npm install @dupecom/botcha                               ║
 ║    pip install botcha                                        ║
+║                                                              ║
+║  Read /ai.txt for full agent onboarding instructions.        ║
 ║                                                              ║
 ║  GitHub:  https://github.com/dupe-com/botcha                 ║
 ║  npm:     https://npmjs.com/package/@dupecom/botcha          ║
@@ -247,7 +252,19 @@ app.get('/', (c) => {
     runtime: 'cloudflare-workers',
     tagline: 'Prove you are a bot. Humans need not apply.',
     description: 'BOTCHA is a reverse CAPTCHA - computational challenges that only AI agents can solve. Use it to protect your APIs from humans and verify bot authenticity.',
+    onboarding: {
+      summary: 'New here? Follow these steps to create your app and get your human access to the dashboard.',
+      step1: 'Ask your human operator for their email address',
+      step2: 'POST /v1/apps with {"email": "human@example.com"} — you will receive app_id and app_secret. The secret is only shown once!',
+      step2_credentials: 'IMPORTANT: Store the app_id and app_secret securely. If you have persistent storage or memory, save them there. Otherwise, instruct your human to store them in a password manager (1Password, Bitwarden, etc). If credentials are lost, recovery is possible via the verified email.',
+      step3: 'A 6-digit verification code is emailed to your human. Ask them for the code.',
+      step4: 'POST /v1/apps/{app_id}/verify-email with {"code": "123456"} — this enables account recovery.',
+      step5: 'You are now registered. Use app_id with all challenge/token endpoints (?app_id=...).',
+      step6_dashboard: 'To give your human dashboard access: POST /v1/auth/device-code with {"app_id": "..."}, solve the speed challenge, then give your human the BOTCHA-XXXX code to enter at /dashboard/code',
+      step7_recovery: 'If you lose your app_secret, POST /v1/auth/recover with {"email": "..."} — a recovery device code is sent to the verified email.',
+    },
     quickstart: {
+      note: 'Already have an app? Use these endpoints to solve challenges and get tokens.',
       step1: 'GET /v1/challenges to receive a challenge',
       step2: 'Solve the SHA256 hash problems within allocated time',
       step3: 'POST your answers to verify',
@@ -482,7 +499,7 @@ app.get('/v1/challenges', rateLimitMiddleware, async (c) => {
         speed: {
           problems: challenge.speed.problems,
           timeLimit: `${challenge.speed.timeLimit}ms`,
-          instructions: 'Compute SHA256 of each number, return first 8 hex chars',
+          instructions: 'Compute SHA256 of each number, return first 8 hex chars. Tip: compute all hashes and submit in a single HTTP request.',
         },
         reasoning: {
           questions: challenge.reasoning.questions,
@@ -1438,6 +1455,7 @@ app.post('/v1/apps', async (c) => {
       email_verified: false,
       verification_required: true,
       warning: '⚠️ Save your app_secret now — it cannot be retrieved again! Check your email for a verification code.',
+      credential_advice: 'Store the app_id and app_secret securely. Use persistent agent memory if available, or instruct your human to save them in a password manager (1Password, Bitwarden, etc). If lost, recovery is available via the verified email.',
       created_at: new Date().toISOString(),
       rate_limit: 100,
       next_step: `POST /v1/apps/${result.app_id}/verify-email with { "code": "123456" }`,
