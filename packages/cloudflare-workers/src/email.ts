@@ -3,13 +3,10 @@
  *
  * Sends transactional emails via Resend API.
  * Falls back to console.log when RESEND_API_KEY is not set (local dev).
- *
- * Uses onboarding@resend.dev (Resend test domain) until botcha.ai
- * is verified as a sending domain.
  */
 
 const RESEND_API = 'https://api.resend.com/emails';
-const FROM_ADDRESS = 'BOTCHA <onboarding@resend.dev>';
+const FROM_ADDRESS = 'BOTCHA <noreply@botcha.ai>';
 
 export interface SendEmailOptions {
   to: string;
