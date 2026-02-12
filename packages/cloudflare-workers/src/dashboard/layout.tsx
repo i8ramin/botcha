@@ -119,3 +119,61 @@ export const LoginLayout: FC<PropsWithChildren<{ title?: string }>> = ({ childre
     </html>
   );
 };
+
+/**
+ * Landing page layout — wider than LoginLayout, includes SEO meta tags.
+ * Used for the public landing page at GET /
+ */
+export const LandingLayout: FC<PropsWithChildren<{ version: string }>> = ({ children, version }) => {
+  return (
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>BOTCHA — Reverse CAPTCHA for AI Agents</title>
+
+        {/* SEO */}
+        <meta name="description" content="BOTCHA is a hosted reverse CAPTCHA that verifies AI agents, not humans. Protect your APIs with computational challenges only bots can solve." />
+        <meta name="keywords" content="AI, bot verification, reverse CAPTCHA, API security, AI agents, agent verification" />
+
+        {/* AI Agent Discovery */}
+        <link rel="alternate" type="application/json" href="/openapi.json" title="OpenAPI Specification" />
+        <link rel="alternate" type="application/json" href="/.well-known/ai-plugin.json" title="AI Plugin Manifest" />
+        <link rel="botcha-challenge" href="#botcha-challenge" type="application/botcha+json" title="Embedded Bot Challenge" />
+        <meta name="ai-agent-welcome" content="true" />
+        <meta name="botcha-challenge" content="embedded" data-selector="script[type='application/botcha+json']" />
+
+        {/* Open Graph */}
+        <meta property="og:title" content="BOTCHA — Reverse CAPTCHA for AI Agents" />
+        <meta property="og:description" content="Hosted bot verification service. Prove you're a bot. Humans need not apply." />
+        <meta property="og:url" content="https://botcha.ai" />
+        <meta property="og:type" content="website" />
+
+        {/* Schema.org */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          name: 'BOTCHA',
+          applicationCategory: 'DeveloperApplication',
+          description: 'Hosted reverse CAPTCHA for AI agents. Computational challenges that only bots can solve.',
+          url: 'https://botcha.ai',
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+          operatingSystem: 'Any',
+          softwareVersion: version,
+        }) }} />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+        <style dangerouslySetInnerHTML={{ __html: DASHBOARD_CSS }} />
+      </head>
+      <body>
+        <div class="login-container">
+          <div class="landing-box">{children}</div>
+        </div>
+      </body>
+    </html>
+  );
+};

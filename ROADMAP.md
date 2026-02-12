@@ -121,12 +121,6 @@ Every token gets a unique `jti` claim for revocation tracking and audit trail.
 - **SDK support:** TypeScript (`createApp`, `verifyEmail`, `resendVerification`, `recoverAccount`, `rotateSecret`) and Python (`create_app`, `verify_email`, `resend_verification`, `recover_account`, `rotate_secret`)
 **Effort:** Large
 
-### Agent Registry
-**What:** Agents register with name, operator, version, public key. Get a persistent identity.
-**Why:** Today every verification is anonymous. We prove intelligence but never learn *who*. No accountability, no reputation.
-**How:** `POST /v1/agents/register` → agent ID + keypair. Agents sign requests with their key. Operators manage their agents via dashboard.
-**Effort:** Large
-
 ### ✅ Per-App Metrics Dashboard — SHIPPED (v0.10.0)
 **What:** Server-rendered dashboard at `/dashboard` showing per-app verification volume, success rates, challenge type breakdown, performance metrics, geographic distribution, and error tracking.
 **Status:** Built with Hono JSX + htmx 2.0.4. Turbopuffer-inspired ASCII terminal aesthetic (JetBrains Mono, dark slate theme, fieldset borders). Cookie-based auth reusing existing JWT infrastructure. Data from Cloudflare Analytics Engine SQL API. Graceful fallback with sample data when CF_API_TOKEN not configured.
@@ -136,6 +130,18 @@ Every token gets a unique `jti` claim for revocation tracking and audit trail.
 - `GET /dashboard/api/*` → htmx HTML fragment endpoints (overview, volume, types, performance, errors, geo)
 - Period filters: 1h, 24h, 7d, 30d via htmx buttons
 - Cookie: `botcha_session` (HttpOnly, Secure, SameSite=Lax, 1hr maxAge)
+**Effort:** Large
+
+### ✅ Agent Registry — SHIPPED (v0.11.0)
+**What:** Agents register with name, operator, version. Get a persistent identity.
+**Status:** Built and tested. Foundation for future delegation chains and reputation scoring.
+**Implementation:**
+- `POST /v1/agents/register` → creates agent with unique agent_id (requires app_id)
+- `GET /v1/agents/:id` → get agent by ID (public, no auth)
+- `GET /v1/agents` → list all agents for authenticated app
+- KV storage: `agent:{agent_id}` for agent data, `app_agents:{app_id}` for app→agent index
+- Crypto-random agent IDs with `agent_` prefix
+- Fail-open validation (KV errors don't block requests)
 **Effort:** Large
 
 ---

@@ -37,6 +37,8 @@ import {
 import { ROBOTS_TXT, AI_TXT, AI_PLUGIN_JSON, SITEMAP_XML, getOpenApiSpec } from './static';
 import { createApp, getApp, getAppByEmail, verifyEmailCode, rotateAppSecret, regenerateVerificationCode } from './apps';
 import { sendEmail, verificationEmail, recoveryEmail, secretRotatedEmail } from './email';
+import { LandingPage } from './dashboard/landing';
+import { createAgent, getAgent, listAgents } from './agents';
 import {
   type AnalyticsEngineDataset,
   trackChallengeGenerated,
@@ -51,6 +53,7 @@ type Bindings = {
   CHALLENGES: KVNamespace;
   RATE_LIMITS: KVNamespace;
   APPS: KVNamespace;
+  AGENTS: KVNamespace;
   ANALYTICS?: AnalyticsEngineDataset;
   JWT_SECRET: string;
   BOTCHA_VERSION: string;
@@ -194,55 +197,12 @@ function isBot(c: Context<{ Bindings: Bindings; Variables: Variables }>): boolea
   return false;
 }
 
-// ASCII art landing page for humans (plain text, terminal-style)
-function getHumanLanding(version: string): string {
-  return `
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║  ██████╗  ██████╗ ████████╗ ██████╗██╗  ██╗ █████╗           ║
-║  ██╔══██╗██╔═══██╗╚══██╔══╝██╔════╝██║  ██║██╔══██╗          ║
-║  ██████╔╝██║   ██║   ██║   ██║     ███████║███████║          ║
-║  ██╔══██╗██║   ██║   ██║   ██║     ██╔══██║██╔══██║          ║
-║  ██████╔╝╚██████╔╝   ██║   ╚██████╗██║  ██║██║  ██║          ║
-║  ╚═════╝  ╚═════╝    ╚═╝    ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝          ║
-║                                                              ║
-║  Prove you're a bot. Humans need not apply.                  ║
-║                                                              ║
-╠══════════════════════════════════════════════════════════════╣
-║                                                              ║
-║  This site is for AI agents and bots, not humans.            ║
-║                                                              ║
-║  AI AGENT? Start here:                                       ║
-║                                                              ║
-║    1. POST /v1/apps {"email":"human@example.com"}            ║
-║    2. Human gets 6-digit code via email                      ║
-║    3. POST /v1/apps/{id}/verify-email {"code":"..."}         ║
-║    4. You're in! Use app_id on all endpoints                 ║
-║                                                              ║
-║  DEVELOPER? Point your agent here:                           ║
-║                                                              ║
-║    npm install @dupecom/botcha                               ║
-║    pip install botcha                                        ║
-║                                                              ║
-║  Read /ai.txt for full agent onboarding instructions.        ║
-║                                                              ║
-║  GitHub:  https://github.com/dupe-com/botcha                 ║
-║  npm:     https://npmjs.com/package/@dupecom/botcha          ║
-║                                                              ║
-╠══════════════════════════════════════════════════════════════╣
-║  v${version}                                   https://botcha.ai  ║
-╚══════════════════════════════════════════════════════════════╝
-`;
-}
-
 app.get('/', (c) => {
   const version = c.env.BOTCHA_VERSION || '0.3.0';
   
-  // If it's a human browser, show plain text ASCII art
+  // Human browsers get a styled HTML landing page (same aesthetic as dashboard)
   if (!isBot(c)) {
-    return c.text(getHumanLanding(version), 200, {
-      'Content-Type': 'text/plain; charset=utf-8',
-    });
+    return c.html(<LandingPage version={version} />);
   }
   
   // For bots/agents, return comprehensive JSON documentation
@@ -1684,6 +1644,189 @@ app.post('/v1/apps/:id/rotate-secret', async (c) => {
     app_secret: result.app_secret,
     warning: '⚠️ Save your new app_secret now — it cannot be retrieved again! The old secret is now invalid.',
   });
+});
+
+// ============ AGENT REGISTRY API ============
+
+// Register a new agent
+app.post('/v1/agents/register', async (c) => {
+  try {
+    // Extract app_id from query param or JWT
+    const queryAppId = c.req.query('app_id');
+    
+    // Try to get from JWT Bearer token
+    let jwtAppId: string | undefined;
+    const authHeader = c.req.header('authorization');
+    const token = extractBearerToken(authHeader);
+    
+    if (token) {
+      const result = await verifyToken(token, c.env.JWT_SECRET, c.env);
+      if (result.valid && result.payload) {
+        jwtAppId = (result.payload as any).app_id;
+      }
+    }
+    
+    const app_id = queryAppId || jwtAppId;
+    
+    if (!app_id) {
+      return c.json({
+        success: false,
+        error: 'MISSING_APP_ID',
+        message: 'app_id is required. Provide it as a query parameter (?app_id=...) or in the JWT token.',
+      }, 401);
+    }
+    
+    // Validate app_id exists
+    const validation = await validateAppId(app_id, c.env.APPS);
+    if (!validation.valid) {
+      return c.json({
+        success: false,
+        error: 'INVALID_APP_ID',
+        message: validation.error || 'Invalid app_id',
+      }, 400);
+    }
+    
+    // Parse request body
+    const body = await c.req.json<{ name?: string; operator?: string; version?: string }>().catch(() => ({} as { name?: string; operator?: string; version?: string }));
+    const { name, operator, version } = body;
+    
+    if (!name || typeof name !== 'string') {
+      return c.json({
+        success: false,
+        error: 'MISSING_NAME',
+        message: 'Agent name is required. Provide { "name": "Your Agent Name" } in the request body.',
+      }, 400);
+    }
+    
+    // Create the agent
+    const agent = await createAgent(c.env.AGENTS, app_id, { name, operator, version });
+    
+    if (!agent) {
+      return c.json({
+        success: false,
+        error: 'AGENT_CREATION_FAILED',
+        message: 'Failed to create agent. Please try again.',
+      }, 500);
+    }
+    
+    return c.json({
+      success: true,
+      agent_id: agent.agent_id,
+      app_id: agent.app_id,
+      name: agent.name,
+      operator: agent.operator,
+      version: agent.version,
+      created_at: new Date(agent.created_at).toISOString(),
+    }, 201);
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    }, 500);
+  }
+});
+
+// Get agent by ID
+app.get('/v1/agents/:id', async (c) => {
+  try {
+    const agent_id = c.req.param('id');
+    
+    if (!agent_id) {
+      return c.json({
+        success: false,
+        error: 'MISSING_AGENT_ID',
+        message: 'Agent ID is required',
+      }, 400);
+    }
+    
+    const agent = await getAgent(c.env.AGENTS, agent_id);
+    
+    if (!agent) {
+      return c.json({
+        success: false,
+        error: 'AGENT_NOT_FOUND',
+        message: `No agent found with ID: ${agent_id}`,
+      }, 404);
+    }
+    
+    return c.json({
+      success: true,
+      agent_id: agent.agent_id,
+      app_id: agent.app_id,
+      name: agent.name,
+      operator: agent.operator,
+      version: agent.version,
+      created_at: new Date(agent.created_at).toISOString(),
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    }, 500);
+  }
+});
+
+// List all agents for an app
+app.get('/v1/agents', async (c) => {
+  try {
+    // Extract app_id from query param or JWT
+    const queryAppId = c.req.query('app_id');
+    
+    // Try to get from JWT Bearer token
+    let jwtAppId: string | undefined;
+    const authHeader = c.req.header('authorization');
+    const token = extractBearerToken(authHeader);
+    
+    if (token) {
+      const result = await verifyToken(token, c.env.JWT_SECRET, c.env);
+      if (result.valid && result.payload) {
+        jwtAppId = (result.payload as any).app_id;
+      }
+    }
+    
+    const app_id = queryAppId || jwtAppId;
+    
+    if (!app_id) {
+      return c.json({
+        success: false,
+        error: 'MISSING_APP_ID',
+        message: 'app_id is required. Provide it as a query parameter (?app_id=...) or in the JWT token.',
+      }, 401);
+    }
+    
+    // Validate app_id exists
+    const validation = await validateAppId(app_id, c.env.APPS);
+    if (!validation.valid) {
+      return c.json({
+        success: false,
+        error: 'INVALID_APP_ID',
+        message: validation.error || 'Invalid app_id',
+      }, 400);
+    }
+    
+    // Get all agents for this app
+    const agents = await listAgents(c.env.AGENTS, app_id);
+    
+    return c.json({
+      success: true,
+      agents: agents.map(agent => ({
+        agent_id: agent.agent_id,
+        app_id: agent.app_id,
+        name: agent.name,
+        operator: agent.operator,
+        version: agent.version,
+        created_at: new Date(agent.created_at).toISOString(),
+      })),
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    }, 500);
+  }
 });
 
 // ============ DASHBOARD AUTH API ENDPOINTS ============

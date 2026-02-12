@@ -104,6 +104,7 @@ Feature: Per-App Metrics Dashboard (server-rendered at /dashboard, htmx-powered)
 Feature: Email-Tied App Creation (email required, 6-digit verification, account recovery)
 Feature: Secret Rotation (rotate app_secret with email notification)
 Feature: Agent-First Dashboard Auth (challenge-based login + device code handoff)
+Feature: Agent Registry (persistent agent identities with name, operator, version)
 
 # Endpoints
 # Challenge Endpoints
@@ -141,6 +142,11 @@ Endpoint: GET https://botcha.ai/dashboard - Per-app metrics dashboard (login req
 Endpoint: GET https://botcha.ai/dashboard/login - Dashboard login page
 Endpoint: POST https://botcha.ai/dashboard/login - Login with app_id + app_secret
 Endpoint: GET https://botcha.ai/dashboard/code - Enter device code (human-facing)
+
+# Agent Registry Endpoints
+Endpoint: POST https://botcha.ai/v1/agents/register - Register agent identity (requires app_id)
+Endpoint: GET https://botcha.ai/v1/agents/:id - Get agent by ID (public, no auth)
+Endpoint: GET https://botcha.ai/v1/agents - List all agents for authenticated app
 
 # Legacy Endpoints
 Endpoint: GET https://botcha.ai/api/challenge - Generate standard challenge
@@ -805,9 +811,126 @@ export function getOpenApiSpec(version: string) {
             "200": { description: "Device code (BOTCHA-XXXX, 10 min TTL)" }
           }
         }
+      },
+      "/v1/agents/register": {
+        post: {
+          summary: "Register a new agent identity",
+          description: "Create a persistent agent identity with name, operator, and version. Requires app_id (via query param or JWT). Returns agent ID and metadata.",
+          operationId: "registerAgent",
+          parameters: [
+            {
+              name: "app_id",
+              in: "query",
+              schema: { type: "string" },
+              description: "Multi-tenant app ID (or use JWT Bearer token with app_id claim)"
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name"],
+                  properties: {
+                    "name": { type: "string", description: "Agent name (e.g., 'my-assistant')" },
+                    "operator": { type: "string", description: "Operator/organization name (e.g., 'Acme Corp')" },
+                    "version": { type: "string", description: "Agent version (e.g., '1.0.0')" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "201": {
+              description: "Agent registered successfully",
+              content: {
+                "application/json": {
+                  schema: { "$ref": "#/components/schemas/Agent" }
+                }
+              }
+            },
+            "400": { description: "Missing required fields or invalid app_id" },
+            "401": { description: "Unauthorized - app_id required" }
+          }
+        }
+      },
+      "/v1/agents/{id}": {
+        get: {
+          summary: "Get agent by ID",
+          description: "Retrieve agent information by agent ID. Public endpoint, no authentication required.",
+          operationId: "getAgent",
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "The agent_id to retrieve (e.g., 'agent_abc123')"
+            }
+          ],
+          responses: {
+            "200": {
+              description: "Agent information",
+              content: {
+                "application/json": {
+                  schema: { "$ref": "#/components/schemas/Agent" }
+                }
+              }
+            },
+            "404": { description: "Agent not found" }
+          }
+        }
+      },
+      "/v1/agents": {
+        get: {
+          summary: "List all agents for authenticated app",
+          description: "Retrieve all agents registered under the authenticated app. Requires app_id (via query param or JWT).",
+          operationId: "listAgents",
+          parameters: [
+            {
+              name: "app_id",
+              in: "query",
+              schema: { type: "string" },
+              description: "Multi-tenant app ID (or use JWT Bearer token with app_id claim)"
+            }
+          ],
+          responses: {
+            "200": {
+              description: "List of agents",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      "agents": {
+                        type: "array",
+                        items: { "$ref": "#/components/schemas/Agent" }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "401": { description: "Unauthorized - app_id required" }
+          }
+        }
       }
     },
     components: {
+      schemas: {
+        Agent: {
+          type: "object",
+          properties: {
+            "agent_id": { type: "string", description: "Unique agent identifier (e.g., 'agent_abc123')" },
+            "app_id": { type: "string", description: "Associated app ID" },
+            "name": { type: "string", description: "Agent name" },
+            "operator": { type: "string", description: "Operator/organization name" },
+            "version": { type: "string", description: "Agent version" },
+            "created_at": { type: "integer", description: "Unix timestamp (ms) of registration" }
+          }
+        }
+      },
       securitySchemes: {
         BotchaLandingToken: {
           type: "apiKey",

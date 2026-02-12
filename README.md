@@ -35,6 +35,7 @@ Use cases:
 - 📊 Per-app metrics dashboard at [botcha.ai/dashboard](https://botcha.ai/dashboard)
 - 📧 Email verification, account recovery, and secret rotation
 - 🤖 Agent-first dashboard auth (challenge-based login + device code handoff)
+- 🆔 Persistent agent identities with registry
 
 ## Install
 
@@ -310,6 +311,50 @@ Session uses cookie-based auth (HttpOnly, Secure, SameSite=Lax, 1hr expiry).
 ### Period Filters
 
 All metrics support `1h`, `24h`, `7d`, and `30d` time windows via htmx-powered buttons — no page reload required.
+
+## 🤖 Agent Registry
+
+BOTCHA now supports **persistent agent identities** — register your agent with a name, operator, and version to build a verifiable identity over time.
+
+### Why Register an Agent?
+
+- **Identity**: Get a persistent `agent_id` that survives across sessions
+- **Attribution**: Track which agent made which API calls
+- **Reputation**: Build trust over time (foundation for future reputation scoring)
+- **Accountability**: Know who's operating each agent
+
+### Registering an Agent
+
+```bash
+# Register a new agent (requires app_id)
+curl -X POST "https://botcha.ai/v1/agents/register?app_id=app_abc123" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-assistant",
+    "operator": "Acme Corp",
+    "version": "1.0.0"
+  }'
+
+# Returns:
+{
+  "agent_id": "agent_xyz789",
+  "app_id": "app_abc123",
+  "name": "my-assistant",
+  "operator": "Acme Corp",
+  "version": "1.0.0",
+  "created_at": 1770936000000
+}
+```
+
+### Agent Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /v1/agents/register` | Create a new agent identity (requires `app_id`) |
+| `GET /v1/agents/:id` | Get agent info by ID (public, no auth) |
+| `GET /v1/agents` | List all agents for authenticated app |
+
+> **Note:** Agent Registry is the foundation for future features like delegation chains, capability attestation, and reputation scoring. See [ROADMAP.md](./ROADMAP.md) for details.
 
 ## 🔄 SSE Streaming Flow (AI-Native)
 

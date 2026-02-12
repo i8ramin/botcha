@@ -45,6 +45,7 @@ Feature: Per-App Metrics Dashboard (server-rendered at /dashboard, htmx-powered)
 Feature: Email-Tied App Creation (email required, 6-digit verification, account recovery)
 Feature: Secret Rotation (rotate app_secret with email notification)
 Feature: Agent-First Dashboard Auth (challenge-based login + device code handoff)
+Feature: Agent Registry (persistent agent identities with name, operator, version)
 
 # Challenge Endpoints
 Endpoint: GET https://botcha.ai/v1/challenges - Generate challenge (hybrid by default)
@@ -81,6 +82,11 @@ Endpoint: GET https://botcha.ai/dashboard - Per-app metrics dashboard (login req
 Endpoint: GET https://botcha.ai/dashboard/login - Dashboard login page
 Endpoint: POST https://botcha.ai/dashboard/login - Login with app_id + app_secret
 Endpoint: GET https://botcha.ai/dashboard/code - Enter device code (human-facing)
+
+# Agent Registry Endpoints
+Endpoint: POST https://botcha.ai/v1/agents/register - Register agent identity (requires app_id)
+Endpoint: GET https://botcha.ai/v1/agents/:id - Get agent by ID (public, no auth)
+Endpoint: GET https://botcha.ai/v1/agents - List all agents for authenticated app
 
 # Legacy Endpoints
 Endpoint: GET https://botcha.ai/api/challenge - Generate standard challenge

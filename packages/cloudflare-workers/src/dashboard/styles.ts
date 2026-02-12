@@ -644,6 +644,69 @@ export const DASHBOARD_CSS = `
   #create-result.show { display: block; }
   #create-btn.loading { opacity: 0.25; pointer-events: none; }
 
+  /* ============ Landing page ============ */
+  .landing-box { width: 100%; max-width: 580px; }
+
+  .landing-tagline {
+    text-align: center; font-size: 0.8125rem;
+    color: var(--text-muted); margin-bottom: 1.5rem;
+  }
+
+  .landing-links {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 0.5rem; margin-bottom: 2rem;
+  }
+  .landing-link {
+    font-size: 0.6875rem; color: var(--text);
+    text-decoration: none; padding: 0.25rem 0.625rem;
+    border: 1px solid var(--border-bright);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .landing-link:hover {
+    border-color: var(--accent); background: var(--bg-raised);
+  }
+
+  .landing-features {
+    display: flex; flex-direction: column; gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  .landing-feature {
+    display: flex; gap: 0.75rem; align-items: baseline;
+    font-size: 0.75rem;
+  }
+  .landing-feature-label {
+    font-weight: 700; color: var(--text);
+    white-space: nowrap; min-width: 10rem;
+  }
+  .landing-feature-desc { color: var(--text-muted); }
+
+  .landing-steps { display: flex; flex-direction: column; gap: 0.75rem; }
+  .landing-step {
+    display: flex; gap: 0.75rem; align-items: flex-start;
+    font-size: 0.75rem; line-height: 1.6;
+  }
+  .landing-step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 1.5rem; height: 1.5rem;
+    border: 1px solid var(--border-bright);
+    font-size: 0.6875rem; font-weight: 700; color: var(--text);
+    flex-shrink: 0;
+  }
+  .landing-step-hint {
+    display: block; font-size: 0.6875rem; color: var(--text-dim);
+    margin-top: 0.125rem;
+  }
+
+  .landing-footer {
+    text-align: center; padding: 2rem 0 0;
+    font-size: 0.6875rem; color: var(--text-dim);
+  }
+  .landing-footer a {
+    color: var(--text-muted); text-decoration: none;
+  }
+  .landing-footer a:hover { color: var(--text); }
+  .landing-footer-sep { margin: 0 0.375rem; }
+
   /* ============ Scrollbar ============ */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg-raised); }
@@ -655,5 +718,7 @@ export const DASHBOARD_CSS = `
     .ascii-logo { font-size: 0.4rem; }
     .login-container { padding: 1rem; }
     .card-inner { padding: 1rem; }
+    .landing-feature { flex-direction: column; gap: 0.125rem; }
+    .landing-feature-label { min-width: auto; }
   }
 `;

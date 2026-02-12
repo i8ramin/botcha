@@ -1,5 +1,5 @@
 name = "botcha"
-main = "dist/index.js"
+main = "src/index.tsx"
 compatibility_date = "2025-01-30"
 compatibility_flags = ["nodejs_compat"]
 account_id = "82c70a74dfe2b9802a95ddac893a4da8"
@@ -41,6 +41,11 @@ id = "c45e9f02ad104ad98d00699db3ad258c"
 [[kv_namespaces]]
 binding = "APPS"
 id = "18d9da1e11364a7b981061c6b01f4855"
+
+# Agents KV namespace for agent registry
+[[kv_namespaces]]
+binding = "AGENTS"
+id = "8107336e9e8c418b895c4134a53037fd"
 
 # Analytics Engine binding for usage tracking
 [[analytics_engine_datasets]]

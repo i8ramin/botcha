@@ -549,13 +549,16 @@ export async function renderLoginPage(c: Context<{ Bindings: Bindings }>) {
   return c.html(
     <LoginLayout title="Dashboard Login - BOTCHA">
       <div class="ascii-logo">{
-` ____   ___ _____ ____ _   _   _
-| __ ) / _ \\_   _/ ___| | | | / \\
-|  _ \\| | | || || |   | |_| |/ _ \\
-| |_) | |_| || || |___|  _  / ___ \\
-|____/ \\___/ |_| \\____|_| |_/_/   \\_\\
-    >_ prove you're a bot`
+`██████╗  ██████╗ ████████╗ ██████╗██╗  ██╗ █████╗
+██╔══██╗██╔═══██╗╚══██╔══╝██╔════╝██║  ██║██╔══██╗
+██████╔╝██║   ██║   ██║   ██║     ███████║███████║
+██╔══██╗██║   ██║   ██║   ██║     ██╔══██║██╔══██║
+██████╔╝╚██████╔╝   ██║   ╚██████╗██║  ██║██║  ██║
+╚═════╝  ╚═════╝    ╚═╝    ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝`
       }</div>
+      <p class="text-muted" style="text-align: center; font-size: 0.75rem; margin: -1rem 0 2rem;">
+        {'>'}_&nbsp;prove you're a bot
+      </p>
 
       {/* Option 1: Device Code (agent generated it) — PRIMARY */}
       <Card title="Device Code" badge="agent required">
