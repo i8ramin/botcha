@@ -8,7 +8,7 @@ Nobody is building the agent-side identity layer. Everyone is building "block bo
 
 ---
 
-## Current Status (v0.9.1)
+## Current Status (v0.10.0)
 
 ### Shipped
 
@@ -43,13 +43,13 @@ Nobody is building the agent-side identity layer. Everyone is building "block bo
 - Badge system with shareable SVG verification proofs
 
 #### SDKs & Integration
-- `@dupecom/botcha` npm package (v0.6.0)
-- `botcha` PyPI package (v0.1.0) — Python SDK
+- `@dupecom/botcha` npm package (v0.10.0) — TypeScript client SDK with app lifecycle methods
+- `botcha` PyPI package (v0.3.0) — Python SDK with app lifecycle methods
 - `@botcha/verify` npm package (v0.1.0) — Server-side verification (Express/Hono)
 - `botcha-verify` PyPI package (v0.1.0) — Server-side verification (FastAPI/Django)
 - Express middleware (`botcha.verify()`)
-- TypeScript client SDK (BotchaClient, BotchaStreamClient)
-- Python client SDK (BotchaClient, solve_botcha)
+- TypeScript client SDK (BotchaClient, BotchaStreamClient) — createApp, verifyEmail, recoverAccount, rotateSecret
+- Python client SDK (BotchaClient, solve_botcha) — create_app, verify_email, recover_account, rotate_secret
 - LangChain tool integration (`@dupecom/botcha-langchain`)
 - CLI tool (`@dupecom/botcha-cli`)
 
@@ -118,6 +118,7 @@ Every token gets a unique `jti` claim for revocation tracking and audit trail.
 - `POST /v1/apps/:id/rotate-secret` → rotate secret (auth required), sends notification email
 - Email→app_id reverse index in KV for recovery lookups
 - Resend API integration (falls back to console.log in dev)
+- **SDK support:** TypeScript (`createApp`, `verifyEmail`, `resendVerification`, `recoverAccount`, `rotateSecret`) and Python (`create_app`, `verify_email`, `resend_verification`, `recover_account`, `rotate_secret`)
 **Effort:** Large
 
 ### Agent Registry
@@ -126,7 +127,7 @@ Every token gets a unique `jti` claim for revocation tracking and audit trail.
 **How:** `POST /v1/agents/register` → agent ID + keypair. Agents sign requests with their key. Operators manage their agents via dashboard.
 **Effort:** Large
 
-### ✅ Per-App Metrics Dashboard — SHIPPED (v0.9.1)
+### ✅ Per-App Metrics Dashboard — SHIPPED (v0.10.0)
 **What:** Server-rendered dashboard at `/dashboard` showing per-app verification volume, success rates, challenge type breakdown, performance metrics, geographic distribution, and error tracking.
 **Status:** Built with Hono JSX + htmx 2.0.4. Turbopuffer-inspired ASCII terminal aesthetic (JetBrains Mono, dark slate theme, fieldset borders). Cookie-based auth reusing existing JWT infrastructure. Data from Cloudflare Analytics Engine SQL API. Graceful fallback with sample data when CF_API_TOKEN not configured.
 **Implementation:**

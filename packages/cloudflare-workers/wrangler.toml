@@ -45,6 +45,7 @@ id = "18d9da1e11364a7b981061c6b01f4855"
 # Analytics Engine binding for usage tracking
 [[analytics_engine_datasets]]
 binding = "ANALYTICS"
+dataset = "botcha"
 
 # Local development settings (must be last to avoid capturing other fields)
 [dev]

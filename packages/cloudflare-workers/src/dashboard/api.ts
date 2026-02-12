@@ -584,8 +584,17 @@ function formatTimeBucket(timestamp: string, period: Period): string {
 
 // ============ MOCK DATA (when CF_API_TOKEN not configured) ============
 
-function renderMockOverview(_period: Period): string {
-  return `<div class="dashboard-grid">
+function renderSampleBanner(): string {
+  return `<div class="sample-banner">Sample data — analytics will appear here once production traffic flows</div>`;
+}
+
+function renderSampleLegend(title: string, period: string): string {
+  return `${title} (${period})<span class="sample-tag">SAMPLE</span>`;
+}
+
+function renderMockOverview(period: Period): string {
+  return `${renderSampleBanner()}
+  <div class="dashboard-grid">
     ${renderStatCard('1,247', 'Challenges Generated')}
     ${renderStatCard('1,089', 'Verifications')}
     ${renderStatCard('94%', 'Success Rate', 'text-success')}
@@ -595,7 +604,7 @@ function renderMockOverview(_period: Period): string {
   </div>`;
 }
 
-function renderMockVolume(_period: Period): string {
+function renderMockVolume(period: Period): string {
   const items = [
     { name: '00:00', value: 42, maxValue: 89 },
     { name: '04:00', value: 15, maxValue: 89 },
@@ -605,12 +614,12 @@ function renderMockVolume(_period: Period): string {
     { name: '20:00', value: 55, maxValue: 89 },
   ];
   return `<fieldset>
-    <legend>Request Volume (sample)</legend>
+    <legend>${renderSampleLegend('Request Volume', period)}</legend>
     ${renderBarChart(items)}
   </fieldset>`;
 }
 
-function renderMockTypes(_period: Period): string {
+function renderMockTypes(period: Period): string {
   const items = [
     { name: 'hybrid (412 ok / 18 fail)', value: 430, maxValue: 430 },
     { name: 'speed (389 ok / 12 fail)', value: 401, maxValue: 430 },
@@ -618,14 +627,14 @@ function renderMockTypes(_period: Period): string {
     { name: 'standard (22 ok / 5 fail)', value: 27, maxValue: 430 },
   ];
   return `<fieldset>
-    <legend>Challenge Types (sample)</legend>
+    <legend>${renderSampleLegend('Challenge Types', period)}</legend>
     ${renderBarChart(items)}
   </fieldset>`;
 }
 
-function renderMockPerformance(_period: Period): string {
+function renderMockPerformance(period: Period): string {
   return `<fieldset>
-    <legend>Performance (sample)</legend>
+    <legend>${renderSampleLegend('Performance', period)}</legend>
     <table>
       <thead>
         <tr>
@@ -641,14 +650,14 @@ function renderMockPerformance(_period: Period): string {
   </fieldset>`;
 }
 
-function renderMockErrors(_period: Period): string {
+function renderMockErrors(period: Period): string {
   return `<fieldset>
-    <legend>Errors & Rate Limits (sample)</legend>
-    <div class="alert alert-success">No errors or rate limits (sample data)</div>
+    <legend>${renderSampleLegend('Errors & Rate Limits', period)}</legend>
+    <div class="alert alert-success">No errors or rate limits</div>
   </fieldset>`;
 }
 
-function renderMockGeo(_period: Period): string {
+function renderMockGeo(period: Period): string {
   const items = [
     { name: 'US', value: 523, maxValue: 523 },
     { name: 'DE', value: 189, maxValue: 523 },
@@ -657,7 +666,7 @@ function renderMockGeo(_period: Period): string {
     { name: 'FR', value: 67, maxValue: 523 },
   ];
   return `<fieldset>
-    <legend>Top Countries (sample)</legend>
+    <legend>${renderSampleLegend('Top Countries', period)}</legend>
     ${renderBarChart(items)}
   </fieldset>`;
 }

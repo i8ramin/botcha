@@ -195,6 +195,8 @@ Multi-Tenant-Rotate-Secret: POST /v1/apps/:id/rotate-secret (auth required) → 
 Multi-Tenant-Usage: Add ?app_id=<your_app_id> to any challenge/token endpoint
 Multi-Tenant-SDK-TS: new BotchaClient({ appId: 'app_abc123' })
 Multi-Tenant-SDK-Python: BotchaClient(app_id='app_abc123')
+SDK-App-Lifecycle-TS: createApp(email), verifyEmail(code), resendVerification(), recoverAccount(email), rotateSecret()
+SDK-App-Lifecycle-Python: create_app(email), verify_email(code), resend_verification(), recover_account(email), rotate_secret()
 Multi-Tenant-Rate-Limit: Each app gets isolated rate limit bucket
 Multi-Tenant-Token-Claim: Tokens include app_id claim when app_id provided
 

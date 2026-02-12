@@ -537,6 +537,31 @@ export const DASHBOARD_CSS = `
   .badge-warning { color: var(--amber); border-color: var(--amber); background: transparent; }
   .badge-info    { color: #fff; border-color: var(--accent); background: var(--accent); }
 
+  /* ============ Sample data indicator ============ */
+  .sample-banner {
+    background: #fffbe6;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+  }
+  .sample-banner::before { content: '[demo]'; margin-right: 0.5rem; }
+  .sample-tag {
+    color: var(--amber);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border: 1px solid var(--amber);
+    padding: 0.0625rem 0.3rem;
+    margin-left: 0.375rem;
+    vertical-align: middle;
+    background: #fffbe6;
+  }
+
   /* ============ Empty state ============ */
   .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
   .empty-state-icon { font-size: 1.5rem; margin-bottom: 0.75rem; color: var(--text); font-weight: 700; }

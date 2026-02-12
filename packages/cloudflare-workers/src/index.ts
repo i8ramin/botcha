@@ -382,6 +382,10 @@ app.get('/', (c) => {
       verify_ts: 'npm install @botcha/verify',
       verify_python: 'pip install botcha-verify',
       usage: "import { BotchaClient } from '@dupecom/botcha/client'",
+      app_lifecycle: {
+        ts: 'createApp(email), verifyEmail(code), resendVerification(), recoverAccount(email), rotateSecret()',
+        python: 'create_app(email), verify_email(code), resend_verification(), recover_account(email), rotate_secret()',
+      },
     },
     links: {
       github: 'https://github.com/dupe-com/botcha',

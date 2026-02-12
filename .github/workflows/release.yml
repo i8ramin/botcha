@@ -152,40 +152,21 @@ jobs:
           echo "| @dupecom/botcha | $(node -p "require('./package.json').version") | ${{ steps.publish-root.outputs.status || 'failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| @dupecom/botcha-cloudflare | $(node -p "require('./packages/cloudflare-workers/package.json').version") | ${{ steps.publish-cf.outputs.status || 'failed' }} |" >> $GITHUB_STEP_SUMMARY
 
-  publish-pypi:
+  # PyPI publish is handled by publish-pypi.yml (separate workflow).
+  # GITHUB_TOKEN events don't trigger downstream workflows, so we
+  # explicitly dispatch publish-pypi.yml after the release is created.
+  trigger-pypi:
     needs: [check-version, create-release]
     if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
-    environment: pypi
+      actions: write
+      contents: read
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install build dependencies
-        run: pip install build
-
-      - name: Sync version from root package.json
-        working-directory: packages/python
+      - name: Trigger publish-pypi.yml
         run: |
-          VERSION="${{ needs.check-version.outputs.version }}"
-          echo "Setting Python package version to $VERSION"
-          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
-          grep '^version' pyproject.toml
-
-      - name: Build package
-        working-directory: packages/python
-        run: python -m build
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: packages/python/dist/
-          skip-existing: true
+          gh workflow run publish-pypi.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}

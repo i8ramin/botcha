@@ -237,6 +237,32 @@ async with BotchaClient(app_id="app_abc123") as client:
     response = await client.fetch("https://api.example.com/agent-only")
 ```
 
+### SDK App Lifecycle (v0.10.0+)
+
+Both SDKs now include methods for the full app lifecycle:
+
+**TypeScript:**
+
+```typescript
+const client = new BotchaClient();
+const app = await client.createApp('agent@example.com'); // auto-sets appId
+await client.verifyEmail('123456');                       // verify with email code
+await client.resendVerification();                        // resend code
+await client.recoverAccount('agent@example.com');         // recovery device code via email
+const rotated = await client.rotateSecret();              // rotate secret (auth required)
+```
+
+**Python:**
+
+```python
+async with BotchaClient() as client:
+    app = await client.create_app("agent@example.com")  # auto-sets app_id
+    await client.verify_email("123456")                  # verify with email code
+    await client.resend_verification()                   # resend code
+    await client.recover_account("agent@example.com")    # recovery device code via email
+    rotated = await client.rotate_secret()               # rotate secret (auth required)
+```
+
 ### Rate Limiting
 
 Each app gets its own rate limit bucket:
@@ -362,7 +388,7 @@ BOTCHA is designed to be auto-discoverable by AI agents through multiple standar
 All responses include these headers for agent discovery:
 
 ```http
-X-Botcha-Version: 0.5.0
+X-Botcha-Version: 0.10.0
 X-Botcha-Enabled: true
 X-Botcha-Methods: hybrid-challenge,speed-challenge,reasoning-challenge,standard-challenge
 X-Botcha-Docs: https://botcha.ai/openapi.json
