@@ -1073,3 +1073,258 @@ async def test_backward_compatibility_no_app_id():
         request = verify_route.calls.last.request
         body = json.loads(request.content)
         assert "app_id" not in body
+
+
+# ============ App Management Tests ============
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_create_app_happy_path():
+    """Test successful app creation with email."""
+    respx.post("https://botcha.ai/v1/apps").mock(
+        return_value=httpx.Response(
+            201,
+            json={
+                "success": True,
+                "app_id": "app_test123",
+                "app_secret": "sk_secret",
+                "email": "agent@example.com",
+                "email_verified": False,
+                "verification_required": True,
+                "warning": "Save your secret!",
+                "credential_advice": "Store securely.",
+                "created_at": "2026-01-01T00:00:00Z",
+                "rate_limit": 100,
+                "next_step": "POST /v1/apps/app_test123/verify-email",
+            },
+        )
+    )
+
+    async with BotchaClient() as client:
+        result = await client.create_app("agent@example.com")
+
+        assert result.success is True
+        assert result.app_id == "app_test123"
+        assert result.app_secret == "sk_secret"
+        assert result.email == "agent@example.com"
+        assert result.email_verified is False
+        # app_id should be auto-set on the client
+        assert client.app_id == "app_test123"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_create_app_sends_email_in_body():
+    """Test that create_app sends email in POST body."""
+    route = respx.post("https://botcha.ai/v1/apps").mock(
+        return_value=httpx.Response(
+            201,
+            json={
+                "success": True,
+                "app_id": "app_test123",
+                "app_secret": "sk_secret",
+                "email": "agent@example.com",
+            },
+        )
+    )
+
+    async with BotchaClient() as client:
+        await client.create_app("agent@example.com")
+
+        request = route.calls.last.request
+        body = json.loads(request.content)
+        assert body["email"] == "agent@example.com"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_create_app_error():
+    """Test app creation failure."""
+    respx.post("https://botcha.ai/v1/apps").mock(
+        return_value=httpx.Response(
+            400,
+            json={
+                "success": False,
+                "error": "MISSING_EMAIL",
+                "message": "Email is required",
+            },
+        )
+    )
+
+    async with BotchaClient() as client:
+        with pytest.raises(httpx.HTTPStatusError):
+            await client.create_app("")
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_verify_email_happy_path():
+    """Test successful email verification."""
+    respx.post("https://botcha.ai/v1/apps/app_test123/verify-email").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "success": True,
+                "email_verified": True,
+            },
+        )
+    )
+
+    async with BotchaClient(app_id="app_test123") as client:
+        result = await client.verify_email("123456")
+
+        assert result.success is True
+        assert result.email_verified is True
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_verify_email_sends_code_in_body():
+    """Test that verify_email sends code in POST body."""
+    route = respx.post("https://botcha.ai/v1/apps/app_test123/verify-email").mock(
+        return_value=httpx.Response(
+            200,
+            json={"success": True, "email_verified": True},
+        )
+    )
+
+    async with BotchaClient(app_id="app_test123") as client:
+        await client.verify_email("654321")
+
+        request = route.calls.last.request
+        body = json.loads(request.content)
+        assert body["code"] == "654321"
+
+
+@pytest.mark.asyncio
+async def test_verify_email_no_app_id_raises():
+    """Test that verify_email raises when no app_id is set."""
+    async with BotchaClient() as client:
+        with pytest.raises(ValueError, match="No app ID"):
+            await client.verify_email("123456")
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_verify_email_explicit_app_id():
+    """Test that verify_email accepts explicit app_id override."""
+    route = respx.post("https://botcha.ai/v1/apps/app_override/verify-email").mock(
+        return_value=httpx.Response(
+            200,
+            json={"success": True, "email_verified": True},
+        )
+    )
+
+    async with BotchaClient(app_id="app_default") as client:
+        await client.verify_email("123456", app_id="app_override")
+        assert route.called
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_resend_verification_happy_path():
+    """Test successful resend verification."""
+    respx.post("https://botcha.ai/v1/apps/app_test123/resend-verification").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "success": True,
+                "message": "Verification code sent",
+            },
+        )
+    )
+
+    async with BotchaClient(app_id="app_test123") as client:
+        result = await client.resend_verification()
+        assert result.success is True
+
+
+@pytest.mark.asyncio
+async def test_resend_verification_no_app_id_raises():
+    """Test that resend_verification raises when no app_id is set."""
+    async with BotchaClient() as client:
+        with pytest.raises(ValueError, match="No app ID"):
+            await client.resend_verification()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_recover_account_happy_path():
+    """Test successful account recovery request."""
+    route = respx.post("https://botcha.ai/v1/auth/recover").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "success": True,
+                "message": "If this email is registered, a recovery code has been sent.",
+            },
+        )
+    )
+
+    async with BotchaClient() as client:
+        result = await client.recover_account("agent@example.com")
+
+        assert result.success is True
+        assert "recovery code" in result.message
+
+        request = route.calls.last.request
+        body = json.loads(request.content)
+        assert body["email"] == "agent@example.com"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_rotate_secret_happy_path():
+    """Test successful secret rotation with Bearer token."""
+    route = respx.post("https://botcha.ai/v1/apps/app_test123/rotate-secret").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "success": True,
+                "app_id": "app_test123",
+                "app_secret": "sk_new_secret",
+                "warning": "Save your new secret!",
+                "rotated_at": "2026-01-01T00:00:00Z",
+            },
+        )
+    )
+
+    async with BotchaClient(app_id="app_test123") as client:
+        # Simulate having a cached token
+        client._token = "session-token-xyz"
+        result = await client.rotate_secret()
+
+        assert result.success is True
+        assert result.app_secret == "sk_new_secret"
+
+        # Verify Bearer token was sent
+        request = route.calls.last.request
+        assert request.headers["Authorization"] == "Bearer session-token-xyz"
+
+
+@pytest.mark.asyncio
+async def test_rotate_secret_no_app_id_raises():
+    """Test that rotate_secret raises when no app_id is set."""
+    async with BotchaClient() as client:
+        with pytest.raises(ValueError, match="No app ID"):
+            await client.rotate_secret()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_rotate_secret_auth_failure():
+    """Test secret rotation auth failure."""
+    respx.post("https://botcha.ai/v1/apps/app_test123/rotate-secret").mock(
+        return_value=httpx.Response(
+            401,
+            json={
+                "success": False,
+                "message": "Authentication required",
+            },
+        )
+    )
+
+    async with BotchaClient(app_id="app_test123") as client:
+        with pytest.raises(httpx.HTTPStatusError):
+            await client.rotate_secret()

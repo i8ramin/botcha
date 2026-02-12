@@ -579,4 +579,201 @@ describe('BotchaClient', () => {
       expect(body.app_id).toBeUndefined();
     });
   });
+
+  describe('createApp()', () => {
+    test('creates app and auto-sets appId', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 201,
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          success: true,
+          app_id: 'app_test123',
+          app_secret: 'sk_secret',
+          email: 'agent@example.com',
+          email_verified: false,
+          verification_required: true,
+          warning: 'Save your secret!',
+          credential_advice: 'Store securely.',
+          created_at: '2026-01-01T00:00:00Z',
+          rate_limit: 100,
+          next_step: 'POST /v1/apps/app_test123/verify-email',
+        }),
+      });
+
+      const client = new BotchaClient();
+      const result = await client.createApp('agent@example.com');
+
+      expect(result.success).toBe(true);
+      expect(result.app_id).toBe('app_test123');
+      expect(result.app_secret).toBe('sk_secret');
+      expect(result.email).toBe('agent@example.com');
+      expect(result.email_verified).toBe(false);
+      // appId should be auto-set
+      expect((client as any).appId).toBe('app_test123');
+
+      // Verify POST body
+      const call = (global.fetch as any).mock.calls[0];
+      expect(call[0]).toContain('/v1/apps');
+      expect(call[1].method).toBe('POST');
+      const body = JSON.parse(call[1].body);
+      expect(body.email).toBe('agent@example.com');
+    });
+
+    test('throws on missing email (400)', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 400,
+        ok: false,
+        json: vi.fn().mockResolvedValue({
+          success: false,
+          error: 'MISSING_EMAIL',
+          message: 'Email is required',
+        }),
+      });
+
+      const client = new BotchaClient();
+      await expect(client.createApp('')).rejects.toThrow('Email is required');
+    });
+  });
+
+  describe('verifyEmail()', () => {
+    test('verifies email with code', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          success: true,
+          email_verified: true,
+        }),
+      });
+
+      const client = new BotchaClient({ appId: 'app_test123' });
+      const result = await client.verifyEmail('123456');
+
+      expect(result.success).toBe(true);
+      expect(result.email_verified).toBe(true);
+
+      const call = (global.fetch as any).mock.calls[0];
+      expect(call[0]).toContain('/v1/apps/app_test123/verify-email');
+      const body = JSON.parse(call[1].body);
+      expect(body.code).toBe('123456');
+    });
+
+    test('throws when no appId set', async () => {
+      const client = new BotchaClient();
+      await expect(client.verifyEmail('123456')).rejects.toThrow('No app ID');
+    });
+
+    test('accepts explicit appId override', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        json: vi.fn().mockResolvedValue({ success: true, email_verified: true }),
+      });
+
+      const client = new BotchaClient({ appId: 'app_default' });
+      await client.verifyEmail('123456', 'app_override');
+
+      const call = (global.fetch as any).mock.calls[0];
+      expect(call[0]).toContain('/v1/apps/app_override/verify-email');
+    });
+  });
+
+  describe('resendVerification()', () => {
+    test('resends verification email', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          success: true,
+          message: 'Verification code sent',
+        }),
+      });
+
+      const client = new BotchaClient({ appId: 'app_test123' });
+      const result = await client.resendVerification();
+
+      expect(result.success).toBe(true);
+
+      const call = (global.fetch as any).mock.calls[0];
+      expect(call[0]).toContain('/v1/apps/app_test123/resend-verification');
+      expect(call[1].method).toBe('POST');
+    });
+
+    test('throws when no appId set', async () => {
+      const client = new BotchaClient();
+      await expect(client.resendVerification()).rejects.toThrow('No app ID');
+    });
+  });
+
+  describe('recoverAccount()', () => {
+    test('sends recovery request', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          success: true,
+          message: 'If this email is registered, a recovery code has been sent.',
+        }),
+      });
+
+      const client = new BotchaClient();
+      const result = await client.recoverAccount('agent@example.com');
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('recovery code');
+
+      const call = (global.fetch as any).mock.calls[0];
+      expect(call[0]).toContain('/v1/auth/recover');
+      const body = JSON.parse(call[1].body);
+      expect(body.email).toBe('agent@example.com');
+    });
+  });
+
+  describe('rotateSecret()', () => {
+    test('rotates secret with Bearer token', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          success: true,
+          app_id: 'app_test123',
+          app_secret: 'sk_new_secret',
+          warning: 'Save your new secret!',
+          rotated_at: '2026-01-01T00:00:00Z',
+        }),
+      });
+
+      const client = new BotchaClient({ appId: 'app_test123' });
+      // Simulate having a cached token
+      (client as any).cachedToken = 'session-token-xyz';
+
+      const result = await client.rotateSecret();
+
+      expect(result.success).toBe(true);
+      expect(result.app_secret).toBe('sk_new_secret');
+
+      const call = (global.fetch as any).mock.calls[0];
+      expect(call[0]).toContain('/v1/apps/app_test123/rotate-secret');
+      expect(call[1].headers['Authorization']).toBe('Bearer session-token-xyz');
+    });
+
+    test('throws when no appId set', async () => {
+      const client = new BotchaClient();
+      await expect(client.rotateSecret()).rejects.toThrow('No app ID');
+    });
+
+    test('throws on auth failure (401)', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 401,
+        ok: false,
+        json: vi.fn().mockResolvedValue({
+          success: false,
+          message: 'Authentication required',
+        }),
+      });
+
+      const client = new BotchaClient({ appId: 'app_test123' });
+      await expect(client.rotateSecret()).rejects.toThrow('Authentication required');
+    });
+  });
 });

@@ -103,3 +103,47 @@ export interface StreamChallengeOptions {
   /** Timeout for the full verification flow in milliseconds (default: 30000) */
   timeout?: number;
 }
+
+// ============ App Management Types ============
+
+export interface CreateAppResponse {
+  success: boolean;
+  app_id: string;
+  app_secret: string;
+  email: string;
+  email_verified: boolean;
+  verification_required: boolean;
+  warning: string;
+  credential_advice: string;
+  created_at: string;
+  rate_limit: number;
+  next_step: string;
+}
+
+export interface VerifyEmailResponse {
+  success: boolean;
+  email_verified?: boolean;
+  error?: string;
+  message?: string;
+}
+
+export interface ResendVerificationResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+export interface RecoverAccountResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface RotateSecretResponse {
+  success: boolean;
+  app_id?: string;
+  app_secret?: string;
+  warning?: string;
+  rotated_at?: string;
+  error?: string;
+  message?: string;
+}

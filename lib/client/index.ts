@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 // SDK version - hardcoded since npm_package_version is unreliable when used as a library
-const SDK_VERSION = '0.7.0';
+const SDK_VERSION = '0.10.0';
 
 // Export types
 export type {
@@ -16,6 +16,11 @@ export type {
   Problem,
   VerifyResult,
   StreamChallengeOptions,
+  CreateAppResponse,
+  VerifyEmailResponse,
+  ResendVerificationResponse,
+  RecoverAccountResponse,
+  RotateSecretResponse,
 } from './types.js';
 
 import type {
@@ -25,6 +30,11 @@ import type {
   StandardChallengeResponse,
   VerifyResponse,
   TokenResponse,
+  CreateAppResponse,
+  VerifyEmailResponse,
+  ResendVerificationResponse,
+  RecoverAccountResponse,
+  RotateSecretResponse,
 } from './types.js';
 
 // Export stream client
@@ -411,6 +421,198 @@ export class BotchaClient {
     }
     
     return headers;
+  }
+
+  // ============ APP MANAGEMENT ============
+
+  /**
+   * Create a new BOTCHA app. Email is required.
+   * 
+   * The returned `app_secret` is only shown once — save it securely.
+   * A 6-digit verification code will be sent to the provided email.
+   * 
+   * @param email - Email address for the app owner
+   * @returns App creation response including app_id and app_secret
+   * @throws Error if app creation fails
+   * 
+   * @example
+   * ```typescript
+   * const app = await client.createApp('agent@example.com');
+   * console.log(app.app_id);     // 'app_abc123'
+   * console.log(app.app_secret); // 'sk_...' (save this!)
+   * ```
+   */
+  async createApp(email: string): Promise<CreateAppResponse> {
+    const res = await fetch(`${this.baseUrl}/v1/apps`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': this.agentIdentity,
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+      throw new Error(
+        (body.message as string) || `App creation failed with status ${res.status}`
+      );
+    }
+
+    const data = await res.json() as CreateAppResponse;
+
+    // Auto-set appId for subsequent requests
+    if (data.app_id) {
+      this.appId = data.app_id;
+    }
+
+    return data;
+  }
+
+  /**
+   * Verify the email address for an app using the 6-digit code sent via email.
+   * 
+   * @param appId - The app ID (defaults to the client's appId)
+   * @param code - The 6-digit verification code from the email
+   * @returns Verification response
+   * @throws Error if verification fails
+   * 
+   * @example
+   * ```typescript
+   * const result = await client.verifyEmail('123456');
+   * console.log(result.email_verified); // true
+   * ```
+   */
+  async verifyEmail(code: string, appId?: string): Promise<VerifyEmailResponse> {
+    const id = appId || this.appId;
+    if (!id) {
+      throw new Error('No app ID. Call createApp() first or pass appId.');
+    }
+
+    const res = await fetch(`${this.baseUrl}/v1/apps/${encodeURIComponent(id)}/verify-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': this.agentIdentity,
+      },
+      body: JSON.stringify({ code }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+      throw new Error(
+        (body.message as string) || `Email verification failed with status ${res.status}`
+      );
+    }
+
+    return await res.json() as VerifyEmailResponse;
+  }
+
+  /**
+   * Resend the email verification code.
+   * 
+   * @param appId - The app ID (defaults to the client's appId)
+   * @returns Response with success status
+   * @throws Error if resend fails
+   */
+  async resendVerification(appId?: string): Promise<ResendVerificationResponse> {
+    const id = appId || this.appId;
+    if (!id) {
+      throw new Error('No app ID. Call createApp() first or pass appId.');
+    }
+
+    const res = await fetch(`${this.baseUrl}/v1/apps/${encodeURIComponent(id)}/resend-verification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': this.agentIdentity,
+      },
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+      throw new Error(
+        (body.message as string) || `Resend verification failed with status ${res.status}`
+      );
+    }
+
+    return await res.json() as ResendVerificationResponse;
+  }
+
+  /**
+   * Request account recovery via verified email.
+   * Sends a device code to the registered email address.
+   * 
+   * Anti-enumeration: always returns the same response shape
+   * whether or not the email exists.
+   * 
+   * @param email - The email address associated with the app
+   * @returns Recovery response (always success for anti-enumeration)
+   */
+  async recoverAccount(email: string): Promise<RecoverAccountResponse> {
+    const res = await fetch(`${this.baseUrl}/v1/auth/recover`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': this.agentIdentity,
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+      throw new Error(
+        (body.message as string) || `Account recovery failed with status ${res.status}`
+      );
+    }
+
+    return await res.json() as RecoverAccountResponse;
+  }
+
+  /**
+   * Rotate the app secret. Requires an active dashboard session (Bearer token).
+   * The old secret is immediately invalidated.
+   * 
+   * @param appId - The app ID (defaults to the client's appId)
+   * @returns New app_secret (save it — only shown once)
+   * @throws Error if rotation fails or auth is missing
+   * 
+   * @example
+   * ```typescript
+   * const result = await client.rotateSecret();
+   * console.log(result.app_secret); // 'sk_new_...' (save this!)
+   * ```
+   */
+  async rotateSecret(appId?: string): Promise<RotateSecretResponse> {
+    const id = appId || this.appId;
+    if (!id) {
+      throw new Error('No app ID. Call createApp() first or pass appId.');
+    }
+
+    // Rotate secret requires a dashboard session token
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'User-Agent': this.agentIdentity,
+    };
+
+    // Use cached token if available (from dashboard auth)
+    if (this.cachedToken) {
+      headers['Authorization'] = `Bearer ${this.cachedToken}`;
+    }
+
+    const res = await fetch(`${this.baseUrl}/v1/apps/${encodeURIComponent(id)}/rotate-secret`, {
+      method: 'POST',
+      headers,
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+      throw new Error(
+        (body.message as string) || `Secret rotation failed with status ${res.status}`
+      );
+    }
+
+    return await res.json() as RotateSecretResponse;
   }
 }
 

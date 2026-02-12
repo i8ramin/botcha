@@ -4,11 +4,20 @@ import base64
 import json
 import time
 from typing import Any, Optional
+from urllib.parse import quote
 
 import httpx
 
 from botcha.solver import solve_botcha
-from botcha.types import ChallengeResponse, TokenResponse
+from botcha.types import (
+    ChallengeResponse,
+    CreateAppResponse,
+    RecoverAccountResponse,
+    ResendVerificationResponse,
+    RotateSecretResponse,
+    TokenResponse,
+    VerifyEmailResponse,
+)
 
 
 class BotchaClient:
@@ -305,6 +314,191 @@ class BotchaClient:
                 pass
 
         return response
+
+    # ============ APP MANAGEMENT ============
+
+    async def create_app(self, email: str) -> CreateAppResponse:
+        """
+        Create a new BOTCHA app. Email is required.
+
+        The returned ``app_secret`` is only shown once — save it securely.
+        A 6-digit verification code will be sent to the provided email.
+
+        Args:
+            email: Email address for the app owner.
+
+        Returns:
+            CreateAppResponse with app_id and app_secret.
+
+        Raises:
+            httpx.HTTPStatusError: If app creation fails.
+
+        Example::
+
+            app = await client.create_app("agent@example.com")
+            print(app.app_id)      # 'app_abc123'
+            print(app.app_secret)  # 'sk_...' (save this!)
+        """
+        response = await self._client.post(
+            f"{self.base_url}/v1/apps",
+            json={"email": email},
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        # Auto-set app_id for subsequent requests
+        if "app_id" in data:
+            self.app_id = data["app_id"]
+
+        return CreateAppResponse(
+            success=data.get("success", False),
+            app_id=data["app_id"],
+            app_secret=data["app_secret"],
+            email=data.get("email", email),
+            email_verified=data.get("email_verified", False),
+            verification_required=data.get("verification_required", True),
+            warning=data.get("warning", ""),
+            credential_advice=data.get("credential_advice", ""),
+            created_at=data.get("created_at", ""),
+            rate_limit=data.get("rate_limit", 100),
+            next_step=data.get("next_step", ""),
+        )
+
+    async def verify_email(
+        self, code: str, app_id: Optional[str] = None
+    ) -> VerifyEmailResponse:
+        """
+        Verify the email address for an app using the 6-digit code.
+
+        Args:
+            code: The 6-digit verification code from the email.
+            app_id: The app ID (defaults to the client's app_id).
+
+        Returns:
+            VerifyEmailResponse with verification status.
+
+        Raises:
+            ValueError: If no app_id is available.
+            httpx.HTTPStatusError: If verification fails.
+        """
+        aid = app_id or self.app_id
+        if not aid:
+            raise ValueError("No app ID. Call create_app() first or pass app_id.")
+
+        response = await self._client.post(
+            f"{self.base_url}/v1/apps/{quote(aid, safe='')}/verify-email",
+            json={"code": code},
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        return VerifyEmailResponse(
+            success=data.get("success", False),
+            email_verified=data.get("email_verified"),
+            error=data.get("error"),
+            message=data.get("message"),
+        )
+
+    async def resend_verification(
+        self, app_id: Optional[str] = None
+    ) -> ResendVerificationResponse:
+        """
+        Resend the email verification code.
+
+        Args:
+            app_id: The app ID (defaults to the client's app_id).
+
+        Returns:
+            ResendVerificationResponse with success status.
+
+        Raises:
+            ValueError: If no app_id is available.
+            httpx.HTTPStatusError: If resend fails.
+        """
+        aid = app_id or self.app_id
+        if not aid:
+            raise ValueError("No app ID. Call create_app() first or pass app_id.")
+
+        response = await self._client.post(
+            f"{self.base_url}/v1/apps/{quote(aid, safe='')}/resend-verification",
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        return ResendVerificationResponse(
+            success=data.get("success", False),
+            message=data.get("message"),
+            error=data.get("error"),
+        )
+
+    async def recover_account(self, email: str) -> RecoverAccountResponse:
+        """
+        Request account recovery via verified email.
+
+        Sends a device code to the registered email address.
+        Anti-enumeration: always returns the same response shape.
+
+        Args:
+            email: The email address associated with the app.
+
+        Returns:
+            RecoverAccountResponse (always success for anti-enumeration).
+
+        Raises:
+            httpx.HTTPStatusError: If the request fails.
+        """
+        response = await self._client.post(
+            f"{self.base_url}/v1/auth/recover",
+            json={"email": email},
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        return RecoverAccountResponse(
+            success=data.get("success", False),
+            message=data.get("message", ""),
+        )
+
+    async def rotate_secret(self, app_id: Optional[str] = None) -> RotateSecretResponse:
+        """
+        Rotate the app secret. Requires an active dashboard session (Bearer token).
+
+        The old secret is immediately invalidated.
+
+        Args:
+            app_id: The app ID (defaults to the client's app_id).
+
+        Returns:
+            RotateSecretResponse with new app_secret (save it!).
+
+        Raises:
+            ValueError: If no app_id is available.
+            httpx.HTTPStatusError: If rotation fails or auth is missing.
+        """
+        aid = app_id or self.app_id
+        if not aid:
+            raise ValueError("No app ID. Call create_app() first or pass app_id.")
+
+        headers: dict[str, str] = {}
+        if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
+
+        response = await self._client.post(
+            f"{self.base_url}/v1/apps/{quote(aid, safe='')}/rotate-secret",
+            headers=headers,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        return RotateSecretResponse(
+            success=data.get("success", False),
+            app_id=data.get("app_id"),
+            app_secret=data.get("app_secret"),
+            warning=data.get("warning"),
+            rotated_at=data.get("rotated_at"),
+            error=data.get("error"),
+            message=data.get("message"),
+        )
 
     async def close(self) -> None:
         """Close the underlying HTTP client and clear cached tokens."""

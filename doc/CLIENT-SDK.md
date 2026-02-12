@@ -6,9 +6,9 @@
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@dupecom/botcha`](https://www.npmjs.com/package/@dupecom/botcha) | 0.6.2 | Core SDK with client (`/client` export) |
+| [`@dupecom/botcha`](https://www.npmjs.com/package/@dupecom/botcha) | 0.10.0 | Core SDK with client (`/client` export) |
 | [`@dupecom/botcha-langchain`](https://www.npmjs.com/package/@dupecom/botcha-langchain) | 0.1.0 | LangChain Tool integration |
-| [`botcha`](https://pypi.org/project/botcha/) (Python) | 0.1.0 | Python SDK on PyPI |
+| [`botcha`](https://pypi.org/project/botcha/) (Python) | 0.3.0 | Python SDK on PyPI |
 | [`@botcha/verify`](../packages/verify/) | 0.1.0 | Server-side verification (Express/Hono middleware) |
 | [`botcha-verify`](../packages/python-verify/) | 0.1.0 | Server-side verification (FastAPI/Django middleware) |
 
@@ -22,6 +22,8 @@ The client SDK allows AI agents to:
 5. ✅ Token rotation with automatic refresh on 401
 6. ✅ Audience-scoped tokens for service isolation
 7. ✅ Token revocation for compromised tokens
+8. ✅ App creation with email verification (SDK methods)
+9. ✅ Account recovery and secret rotation (SDK methods)
 
 ## Implemented API
 
@@ -211,6 +213,61 @@ from botcha import BotchaClient
 
 async with BotchaClient(app_id="app_abc123") as client:
     response = await client.fetch("https://api.example.com/protected")
+```
+
+### App Lifecycle Methods (v0.10.0+)
+
+Both SDKs now include methods for the full app lifecycle — creation, email verification, recovery, and secret rotation.
+
+**TypeScript:**
+
+```typescript
+import { BotchaClient } from '@dupecom/botcha/client';
+
+const client = new BotchaClient();
+
+// 1. Create app (auto-sets client.appId)
+const app = await client.createApp('agent@example.com');
+console.log(app.app_id);     // 'app_abc123'
+console.log(app.app_secret); // 'sk_...' (save this!)
+
+// 2. Verify email with 6-digit code from inbox
+await client.verifyEmail('123456');
+
+// 3. Resend verification if needed
+await client.resendVerification();
+
+// 4. Recover account (sends device code to email)
+await client.recoverAccount('agent@example.com');
+
+// 5. Rotate secret (requires active session)
+const rotated = await client.rotateSecret();
+console.log(rotated.app_secret); // new secret
+```
+
+**Python:**
+
+```python
+from botcha import BotchaClient
+
+async with BotchaClient() as client:
+    # 1. Create app (auto-sets client.app_id)
+    app = await client.create_app("agent@example.com")
+    print(app.app_id)      # 'app_abc123'
+    print(app.app_secret)  # 'sk_...' (save this!)
+
+    # 2. Verify email with 6-digit code
+    await client.verify_email("123456")
+
+    # 3. Resend verification if needed
+    await client.resend_verification()
+
+    # 4. Recover account (sends device code to email)
+    await client.recover_account("agent@example.com")
+
+    # 5. Rotate secret (requires active session)
+    rotated = await client.rotate_secret()
+    print(rotated.app_secret)  # new secret
 ```
 
 ### How It Works
@@ -403,7 +460,7 @@ try {
 
 ## Python SDK
 
-**Status:** ✅ Published on [PyPI](https://pypi.org/project/botcha/) (v0.1.0)
+**Status:** ✅ Published on [PyPI](https://pypi.org/project/botcha/) (v0.3.0)
 
 The Python SDK provides the same capabilities as the TypeScript client, including token rotation, audience claims, and automatic refresh.
 
@@ -479,6 +536,11 @@ The Python SDK mirrors the TypeScript API:
 - `get_token()` - Acquire JWT access token (with caching)
 - `refresh_token()` - Refresh access token using refresh token
 - `fetch(url)` - Auto-solve and fetch URL with challenge handling
+- `create_app(email)` - Create a new app (email required, auto-sets app_id)
+- `verify_email(code, app_id?)` - Verify email with 6-digit code
+- `resend_verification(app_id?)` - Resend verification email
+- `recover_account(email)` - Request account recovery via email
+- `rotate_secret(app_id?)` - Rotate app secret (requires session token)
 - `close()` - Close client and clear cached tokens
 
 **Constructor parameters:**
