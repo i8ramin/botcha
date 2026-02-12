@@ -19,6 +19,7 @@
 🌐 **Website:** [botcha.ai](https://botcha.ai)  
 📦 **npm:** [@dupecom/botcha](https://www.npmjs.com/package/@dupecom/botcha)  
 🐍 **PyPI:** [botcha](https://pypi.org/project/botcha/)  
+🔐 **Verify:** [@botcha/verify](./packages/verify/) (TS) · [botcha-verify](./packages/python-verify/) (Python)  
 🔌 **OpenAPI:** [botcha.ai/openapi.json](https://botcha.ai/openapi.json)
 
 ## Why?
@@ -431,6 +432,50 @@ Fork the repo, make your changes, and open a PR. You'll receive a BOTCHA challen
 You can use the library freely, report issues, and discuss features. To contribute code, you'll need to work with an AI coding agent like [Cursor](https://cursor.com), [Claude Code](https://claude.ai), [Cline](https://cline.bot), [Aider](https://aider.chat), or [OpenClaw](https://openclaw.ai).
 
 **See [CONTRIBUTING.md](./.github/CONTRIBUTING.md) for complete guidelines, solver code examples, agent setup instructions, and detailed workflows.**
+
+## Server-Side Verification (for API Providers)
+
+If you're building an API that accepts BOTCHA tokens from agents, use the verification SDKs:
+
+### TypeScript (Express / Hono)
+
+```bash
+npm install @botcha/verify
+```
+
+```typescript
+import { botchaVerify } from '@botcha/verify/express';
+
+app.use('/api', botchaVerify({
+  secret: process.env.BOTCHA_SECRET!,
+  audience: 'https://api.example.com',
+}));
+
+app.get('/api/protected', (req, res) => {
+  console.log('Solve time:', req.botcha?.solveTime);
+  res.json({ message: 'Welcome, verified agent!' });
+});
+```
+
+### Python (FastAPI / Django)
+
+```bash
+pip install botcha-verify
+```
+
+```python
+from fastapi import FastAPI, Depends
+from botcha_verify.fastapi import BotchaVerify
+
+app = FastAPI()
+botcha = BotchaVerify(secret='your-secret-key')
+
+@app.get('/api/data')
+async def get_data(token = Depends(botcha)):
+    return {"solve_time": token.solve_time}
+```
+
+> **Docs:** See [`@botcha/verify` README](./packages/verify/README.md) and [`botcha-verify` README](./packages/python-verify/README.md) for full API reference, Hono middleware, Django middleware, revocation checking, and custom error handlers.
 
 ## Client SDK (for AI Agents)
 

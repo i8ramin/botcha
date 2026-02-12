@@ -8,7 +8,7 @@ Nobody is building the agent-side identity layer. Everyone is building "block bo
 
 ---
 
-## Current Status (v0.7.0)
+## Current Status (v0.8.0)
 
 ### Shipped
 
@@ -44,6 +44,8 @@ Nobody is building the agent-side identity layer. Everyone is building "block bo
 #### SDKs & Integration
 - `@dupecom/botcha` npm package (v0.6.0)
 - `botcha` PyPI package (v0.1.0) — Python SDK
+- `@botcha/verify` npm package (v0.1.0) — Server-side verification (Express/Hono)
+- `botcha-verify` PyPI package (v0.1.0) — Server-side verification (FastAPI/Django)
 - Express middleware (`botcha.verify()`)
 - TypeScript client SDK (BotchaClient, BotchaStreamClient)
 - Python client SDK (BotchaClient, solve_botcha)
@@ -94,11 +96,10 @@ Every token gets a unique `jti` claim for revocation tracking and audit trail.
 **How:** `POST /v1/apps` creates an app. App-specific challenge config, rate limits, analytics. Tokens are scoped to apps.
 **Effort:** Large
 
-### Server-side verification SDK
+### ✅ Server-side verification SDK — SHIPPED (v0.1.0)
 **What:** `npm install @botcha/verify` / `pip install botcha-verify` — one-line middleware for any app to verify incoming BOTCHA tokens.
-**Why:** We have the agent SDK (client-side). Now services need the verification SDK (server-side). Makes adoption trivial.
-**How:** Middleware that validates JWT signature, checks expiry, verifies audience, checks revocation. Works with Express, FastAPI, Hono, Django, etc.
-**Effort:** Medium
+**Status:** Built and tested. TypeScript: 58 tests (Express + Hono middleware). Python: 30 tests (FastAPI + Django middleware). Both verify JWT signature, expiry, type, audience, client IP binding, and revocation.
+**Packages:** `@botcha/verify` (npm) · `botcha-verify` (PyPI)
 
 ### Agent Registry
 **What:** Agents register with name, operator, version, public key. Get a persistent identity.

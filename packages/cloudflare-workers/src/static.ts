@@ -88,6 +88,7 @@ Feature: Token Rotation (5-minute access tokens + 1-hour refresh tokens)
 Feature: Audience Claims (tokens scoped to specific services)
 Feature: Client IP Binding (optional token-to-IP binding)
 Feature: Token Revocation (invalidate tokens before expiry)
+Feature: Server-Side Verification SDK (@botcha/verify for TS, botcha-verify for Python)
 
 # Endpoints
 # Challenge Endpoints
@@ -114,9 +115,10 @@ Endpoint: POST https://botcha.ai/api/speed-challenge - Verify speed challenge
 Endpoint: GET https://botcha.ai/agent-only - Protected AI-only resource
 
 # Usage
-# Usage
 Install-NPM: npm install @dupecom/botcha
 Install-Python: pip install botcha
+Verify-NPM: npm install @botcha/verify
+Verify-Python: pip install botcha-verify
 License: MIT
 
 # AI Agent Welcome
@@ -228,7 +230,9 @@ export function getOpenApiSpec(version: string) {
       },
       "x-sdk": {
         npm: "@dupecom/botcha",
-        python: "botcha (pip install botcha)"
+        python: "botcha (pip install botcha)",
+        verify_npm: "@botcha/verify (server-side verification)",
+        verify_python: "botcha-verify (pip install botcha-verify)"
       }
     },
     servers: [

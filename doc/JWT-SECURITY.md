@@ -2,7 +2,7 @@
 
 > Complete guide to BOTCHA's token system — audience scoping, rotation, refresh, revocation, and IP binding.
 
-**Status:** ✅ Shipped (v0.7.0)
+**Status:** ✅ Shipped (v0.7.0, verification SDKs added v0.8.0)
 
 ## Overview
 
@@ -239,7 +239,73 @@ The `jti` enables:
 
 ---
 
-## SDK Integration
+## Server-Side Verification SDKs
+
+For API providers that accept BOTCHA tokens from agents, use the verification SDKs instead of implementing JWT verification manually:
+
+### TypeScript (`@botcha/verify`)
+
+```bash
+npm install @botcha/verify
+```
+
+```typescript
+// Express middleware — one line
+import { botchaVerify } from '@botcha/verify/express';
+
+app.use('/api', botchaVerify({
+  secret: process.env.BOTCHA_SECRET!,
+  audience: 'https://api.example.com',  // Reject tokens scoped to other services
+  checkRevocation: async (jti) => db.isRevoked(jti),  // Optional
+}));
+
+app.get('/api/data', (req, res) => {
+  // req.botcha contains the verified payload
+  console.log('Solved in:', req.botcha?.solveTime, 'ms');
+  res.json({ data: 'protected' });
+});
+```
+
+Also available for Hono:
+
+```typescript
+import { botchaVerify } from '@botcha/verify/hono';
+app.use('/api/*', botchaVerify({ secret: env.BOTCHA_SECRET }));
+```
+
+Or standalone (any framework):
+
+```typescript
+import { verifyBotchaToken } from '@botcha/verify';
+const result = await verifyBotchaToken(token, { secret, audience, clientIp });
+```
+
+### Python (`botcha-verify`)
+
+```bash
+pip install botcha-verify
+```
+
+```python
+# FastAPI
+from botcha_verify.fastapi import BotchaVerify
+botcha = BotchaVerify(secret='your-secret', audience='https://api.example.com')
+
+@app.get('/api/data')
+async def get_data(token = Depends(botcha)):
+    return {"solve_time": token.solve_time}
+
+# Django — add middleware + settings
+MIDDLEWARE = ['botcha_verify.django.BotchaVerifyMiddleware']
+BOTCHA_SECRET = 'your-secret'
+BOTCHA_PROTECTED_PATHS = ['/api/']
+```
+
+> **Full docs:** [`@botcha/verify` README](../packages/verify/README.md) · [`botcha-verify` README](../packages/python-verify/README.md)
+
+---
+
+## Client SDK Integration (for AI Agents)
 
 ### TypeScript
 

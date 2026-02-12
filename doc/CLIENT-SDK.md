@@ -9,6 +9,8 @@
 | [`@dupecom/botcha`](https://www.npmjs.com/package/@dupecom/botcha) | 0.6.2 | Core SDK with client (`/client` export) |
 | [`@dupecom/botcha-langchain`](https://www.npmjs.com/package/@dupecom/botcha-langchain) | 0.1.0 | LangChain Tool integration |
 | [`botcha`](https://pypi.org/project/botcha/) (Python) | 0.1.0 | Python SDK on PyPI |
+| [`@botcha/verify`](../packages/verify/) | 0.1.0 | Server-side verification (Express/Hono middleware) |
+| [`botcha-verify`](../packages/python-verify/) | 0.1.0 | Server-side verification (FastAPI/Django middleware) |
 
 ## Overview
 
@@ -307,6 +309,84 @@ The Python SDK mirrors the TypeScript API:
 - `audience` - Scope tokens to a specific service (optional)
 
 **Implementation:** See `packages/python/` for full source code including SHA256 solver, async HTTP client (httpx), and type annotations.
+
+## Server-Side Verification SDKs
+
+For API providers who need to verify incoming BOTCHA tokens from agents.
+
+### TypeScript (@botcha/verify)
+
+**Status:** ✅ Built (v0.1.0) — [README](../packages/verify/README.md)
+
+```typescript
+import { botchaVerify } from '@botcha/verify/express';
+
+// Express middleware
+app.use('/api', botchaVerify({
+  secret: process.env.BOTCHA_SECRET!,
+  audience: 'https://api.example.com',
+  requireIp: true,
+  checkRevocation: async (jti) => db.revokedTokens.exists(jti),
+}));
+
+app.get('/api/data', (req, res) => {
+  console.log('Challenge ID:', req.botcha?.sub);
+  console.log('Solve time:', req.botcha?.solveTime);
+  res.json({ data: 'protected' });
+});
+```
+
+```typescript
+// Hono middleware
+import { botchaVerify } from '@botcha/verify/hono';
+
+app.use('/api/*', botchaVerify({ secret: env.BOTCHA_SECRET }));
+```
+
+```typescript
+// Standalone verification (any framework)
+import { verifyBotchaToken } from '@botcha/verify';
+
+const result = await verifyBotchaToken(token, {
+  secret: process.env.BOTCHA_SECRET!,
+  audience: 'https://api.example.com',
+});
+```
+
+**Features:** JWT signature (HS256), expiry, token type, audience claim, client IP binding, revocation checking, custom error handlers.
+
+### Python (botcha-verify)
+
+**Status:** ✅ Built (v0.1.0) — [README](../packages/python-verify/README.md)
+
+```python
+# FastAPI
+from fastapi import FastAPI, Depends
+from botcha_verify.fastapi import BotchaVerify
+
+app = FastAPI()
+botcha = BotchaVerify(secret='your-secret-key', audience='https://api.example.com')
+
+@app.get('/api/data')
+async def get_data(token = Depends(botcha)):
+    return {"solve_time": token.solve_time}
+```
+
+```python
+# Django (settings.py)
+MIDDLEWARE = ['botcha_verify.django.BotchaVerifyMiddleware']
+BOTCHA_SECRET = 'your-secret-key'
+BOTCHA_PROTECTED_PATHS = ['/api/']
+```
+
+```python
+# Standalone verification
+from botcha_verify import verify_botcha_token, VerifyOptions
+
+result = verify_botcha_token(token, secret='your-key', options=VerifyOptions(audience='https://api.example.com'))
+```
+
+**Features:** JWT signature (HS256), expiry, token type, audience claim, client IP binding, auto_error toggle (FastAPI), path-based protection (Django).
 
 ## Future: Go SDK
 

@@ -1,0 +1,75 @@
+{
+  "name": "@botcha/verify",
+  "version": "0.1.0",
+  "description": "Server-side verification middleware for BOTCHA JWT tokens",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./express": {
+      "import": "./dist/middleware/express.js",
+      "types": "./dist/middleware/express.d.ts"
+    },
+    "./hono": {
+      "import": "./dist/middleware/hono.js",
+      "types": "./dist/middleware/hono.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "botcha",
+    "jwt",
+    "verification",
+    "middleware",
+    "express",
+    "hono",
+    "authentication",
+    "bot"
+  ],
+  "author": "Ramin <ramin@dupe.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dupe-com/botcha"
+  },
+  "homepage": "https://botcha.ai",
+  "dependencies": {
+    "jose": "^5.9.6"
+  },
+  "peerDependencies": {
+    "express": "^4.0.0 || ^5.0.0",
+    "hono": "^4.0.0 || ^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
+    "hono": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.25",
+    "@types/node": "^20.19.0",
+    "express": "^4.18.2",
+    "hono": "^4.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
