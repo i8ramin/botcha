@@ -76,10 +76,10 @@ export async function logAnalyticsEvent(
       event.responseTimeMs || 0,
     ];
 
+    // IMPORTANT: Analytics Engine only supports a SINGLE index.
+    // Multiple indexes silently drops the data point.
     const indexes: string[] = [
       event.eventType,
-      event.challengeType || 'none',
-      event.endpoint || 'unknown',
     ];
 
     analytics.writeDataPoint({
