@@ -30,6 +30,7 @@ const PeriodSelector: FC<{ currentPeriod?: string; targetId: string; endpoint: s
           hx-get={`${endpoint}?period=${p.value}`}
           hx-target={`#${targetId}`}
           hx-swap="innerHTML"
+          onclick={`this.parentElement.querySelectorAll('button').forEach(b=>b.className='secondary');this.className=''`}
           style="padding: 0.4rem 0.8rem; font-size: 0.75rem;"
         >
           {p.label}
