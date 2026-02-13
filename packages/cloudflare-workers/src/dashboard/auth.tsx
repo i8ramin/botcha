@@ -507,56 +507,44 @@ export async function handleEmailLogin(c: Context<{ Bindings: Bindings }>) {
 
 // ============ LOGIN PAGE ============
 
+const DASHBOARD_PROMPT = `Run: curl -s https://botcha.ai -H 'Accept: application/json' — then follow the instructions to verify yourself and get me a dashboard login code for botcha.ai.`;
+
+const COPY_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="9" y="9" width="13" height="13" rx="0"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>`;
+const CHECK_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+const LOGIN_COPY_SCRIPT = `
+function copyDashPrompt() {
+  var text = document.getElementById('dash-prompt').textContent.trim();
+  navigator.clipboard.writeText(text).then(function() {
+    var label = document.getElementById('dash-copy-label');
+    var icon = document.getElementById('dash-copy-icon');
+    var txt = document.getElementById('dash-copy-text');
+    label.style.color = 'var(--green)';
+    icon.innerHTML = '${CHECK_ICON_SVG.replace(/'/g, "\\'")}';
+    txt.textContent = 'Copied — now paste into your agent';
+    setTimeout(function() {
+      label.style.color = 'var(--text-muted)';
+      icon.innerHTML = '${COPY_ICON_SVG.replace(/'/g, "\\'")}';
+      txt.textContent = 'Click to copy';
+    }, 2500);
+  });
+}
+`;
+
 /**
  * GET /dashboard/login
  *
- * Four ways in:
- *   1. Device code (agent generated the code) — primary
+ * Two ways in:
+ *   1. Agent prompt (primary) — copy curl command, agent gets device code
  *   2. Email login (returning users — code emailed to verified address)
- *   3. App ID + Secret (agent created the app)
- *   4. Create new app (triggers POST /v1/apps)
  */
 export async function renderLoginPage(c: Context<{ Bindings: Bindings }>) {
   const url = new URL(c.req.url);
   const error = url.searchParams.get('error');
 
   const errorMap: Record<string, string> = {
-    invalid: 'Invalid app ID or secret',
-    missing: 'Please provide both app ID and secret',
-    server: 'Server error. Please try again.',
     email_missing: 'Please enter your email address.',
   };
-
-  const CREATE_APP_SCRIPT = `
-    async function createApp() {
-      var btn = document.getElementById('create-btn');
-      btn.classList.add('loading');
-      btn.textContent = 'Creating...';
-      try {
-        var resp = await fetch('/v1/apps', { method: 'POST' });
-        var data = await resp.json();
-        if (data.app_id && data.app_secret) {
-          document.getElementById('new-app-id').textContent = data.app_id;
-          document.getElementById('new-app-secret').textContent = data.app_secret;
-          document.getElementById('create-result').classList.add('show');
-          btn.style.display = 'none';
-        } else {
-          btn.textContent = '[ERR] try again >';
-          btn.classList.remove('loading');
-        }
-      } catch (e) {
-        btn.textContent = '[ERR] try again >';
-        btn.classList.remove('loading');
-      }
-    }
-    function fillAndLogin() {
-      var appId = document.getElementById('new-app-id').textContent;
-      var secret = document.getElementById('new-app-secret').textContent;
-      document.getElementById('app_id').value = appId;
-      document.getElementById('app_secret').value = secret;
-      document.querySelector('form').submit();
-    }
-  `;
 
   return c.html(
     <LoginLayout title="Dashboard Login - BOTCHA">
@@ -569,25 +557,50 @@ export async function renderLoginPage(c: Context<{ Bindings: Bindings }>) {
 ╚═════╝  ╚═════╝    ╚═╝    ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝`
       }</a>
       <p class="text-muted" style="text-align: center; font-size: 0.75rem; margin: -1rem 0 2rem;">
-        {'>'}_&nbsp;prove you're a bot
+        {'>'}_&nbsp;dashboard login
       </p>
 
-      {/* Option 1: Device Code (agent generated it) — PRIMARY */}
-      <Card title="Device Code" badge="agent required">
-        <p class="text-muted mb-2" style="font-size: 0.75rem;">
-          Your AI agent can generate a login code for you.
-        </p>
-        <a href="/dashboard/code" class="button btn">Enter Device Code {'>'}</a>
-        <div class="hint">
-          Agent: <code>POST /v1/auth/device-code</code> then solve the challenge.
+      {/* Primary: Agent prompt */}
+      <p class="text-muted" style="font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.15em; text-align: center; margin-bottom: 0.625rem;">
+        Paste this into your AI agent
+      </p>
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-body">
+          <button
+            id="dash-prompt-btn"
+            onclick="copyDashPrompt()"
+            type="button"
+            class="card-inner"
+            style="display: block; width: 100%; padding: 1.5rem; border: none; border-radius: 0; cursor: pointer; font-family: var(--font); text-align: left; text-transform: none; letter-spacing: normal; box-shadow: none; transition: background 0.2s;"
+          >
+            <code id="dash-prompt" style="font-size: 0.9375rem; font-weight: 700; color: var(--accent); line-height: 1.5; display: block; background: none; border: none; padding: 0;">
+              {DASHBOARD_PROMPT}
+            </code>
+            <span
+              id="dash-copy-label"
+              style="display: flex; align-items: center; gap: 0.375rem; margin-top: 1rem; font-size: 0.6875rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; transition: color 0.2s;"
+            >
+              <span
+                id="dash-copy-icon"
+                style="display: flex; transition: color 0.2s;"
+                dangerouslySetInnerHTML={{ __html: COPY_ICON_SVG }}
+              />
+              <span id="dash-copy-text">Click to copy</span>
+            </span>
+          </button>
         </div>
-      </Card>
+      </div>
 
-      <Divider text="or" />
+      <p class="text-muted" style="font-size: 0.75rem; text-align: center; line-height: 1.8; margin-bottom: 1.5rem;">
+        Your agent solves a challenge, gets a code, and gives you a link.<br/>
+        Click it. You're in the dashboard.
+      </p>
 
-      {/* Option 2: Email Login (returning users — no agent needed) */}
+      <Divider text="returning user?" />
+
+      {/* Secondary: Email Login */}
       <form method="post" action="/dashboard/email-login">
-        <Card title="Email Login" badge="returning users">
+        <Card title="Email Login">
           {error === 'email_missing' && (
             <div class="error-message">{errorMap[error]}</div>
           )}
@@ -603,42 +616,7 @@ export async function renderLoginPage(c: Context<{ Bindings: Bindings }>) {
         </Card>
       </form>
 
-      <Divider text="or sign in with credentials" />
-
-      {/* Option 3: App ID + Secret / Create New App */}
-      <form method="post" action="/dashboard/login">
-        <Card title="App Credentials">
-          {error && error !== 'email_missing' && errorMap[error] && (
-            <div class="error-message">{errorMap[error]}</div>
-          )}
-          <div id="create-result">
-            <div class="warning">
-              Save these credentials now. The secret will not be shown again.
-            </div>
-            <div class="credentials-box">
-              <span class="label">app_id: </span><span class="value" id="new-app-id"></span><br />
-              <span class="label">secret: </span><span class="value" id="new-app-secret"></span>
-            </div>
-            <button type="button" onclick="fillAndLogin()" style="width: 100%; margin-bottom: 1rem;">Login With New Credentials {'>'}</button>
-          </div>
-          <div class="form-group">
-            <label for="app_id">App ID</label>
-            <input type="text" id="app_id" name="app_id" placeholder="app_..." required autocomplete="username" />
-          </div>
-          <div class="form-group">
-            <label for="app_secret">App Secret</label>
-            <input type="password" id="app_secret" name="app_secret" placeholder="sk_..." required autocomplete="current-password" />
-          </div>
-          <div style="display: flex; gap: 0.75rem; align-items: center;">
-            <button type="submit">Login {'>'}</button>
-            <button type="button" id="create-btn" class="btn-secondary" onclick="createApp()">
-              Create App {'>'}
-            </button>
-          </div>
-        </Card>
-      </form>
-
-      <script dangerouslySetInnerHTML={{ __html: CREATE_APP_SCRIPT }} />
+      <script dangerouslySetInnerHTML={{ __html: LOGIN_COPY_SCRIPT }} />
     </LoginLayout>
   );
 }

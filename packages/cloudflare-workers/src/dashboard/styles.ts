@@ -413,8 +413,8 @@ export const DASHBOARD_CSS = `
   /* ============ Login layout ============ */
   .login-container {
     min-height: 100vh;
-    display: flex; align-items: center; justify-content: center;
-    padding: 2rem;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 4rem 2rem 2rem;
     background: var(--bg);
   }
   .login-box { width: 100%; max-width: 420px; }
