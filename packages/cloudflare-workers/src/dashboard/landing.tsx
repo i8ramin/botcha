@@ -106,32 +106,41 @@ export const LandingPage: FC<{ version: string; error?: string }> = ({ version, 
           <p style="color: var(--red); font-size: 0.75rem;">{error}</p>
         </div>
       )}
-      <details style="margin-top: 1rem;">
-        <summary class="text-muted" style="font-size: 0.6875rem; cursor: pointer; text-align: center; list-style: none; text-decoration: underline; text-underline-offset: 3px;">
-          Already have a code?
-        </summary>
-        <form method="post" action="/gate" style="margin-top: 0.75rem;">
-          <div style="display: flex; gap: 0;">
-            <input
-              id="code"
-              name="code"
-              type="text"
-              placeholder="BOTCHA-XXXXXX"
-              required
-              autocomplete="off"
-              spellcheck={false}
-              maxlength={13}
-              style="flex: 1; font-size: 0.875rem; font-family: var(--font); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.625rem; text-align: center; border: 1px solid var(--border); border-radius: 0; background: var(--bg); color: var(--text);"
-            />
-            <button
-              type="submit"
-              style="padding: 0.625rem 1rem; font-family: var(--font); font-size: 0.8125rem; font-weight: 600; background: var(--accent); color: #fff; border: 1px solid var(--accent); border-left: none; border-radius: 0; cursor: pointer; white-space: nowrap;"
-            >
-              Go {'>'}
-            </button>
-          </div>
-        </form>
-      </details>
+      <div style="text-align: center; margin-top: 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.625rem;">
+        <a
+          href="/dashboard/login"
+          class="text-muted"
+          style="font-size: 0.6875rem; text-decoration: underline; text-underline-offset: 3px;"
+        >
+          Already have an account? Log in
+        </a>
+        <details style="margin: 0;">
+          <summary class="text-muted" style="font-size: 0.6875rem; cursor: pointer; text-align: center; list-style: none; text-decoration: underline; text-underline-offset: 3px;">
+            Have a code?
+          </summary>
+          <form method="post" action="/gate" style="margin-top: 0.75rem;">
+            <div style="display: flex; gap: 0;">
+              <input
+                id="code"
+                name="code"
+                type="text"
+                placeholder="BOTCHA-XXXXXX"
+                required
+                autocomplete="off"
+                spellcheck={false}
+                maxlength={13}
+                style="flex: 1; font-size: 0.875rem; font-family: var(--font); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.625rem; text-align: center; border: 1px solid var(--border); border-radius: 0; background: var(--bg); color: var(--text);"
+              />
+              <button
+                type="submit"
+                style="padding: 0.625rem 1rem; font-family: var(--font); font-size: 0.8125rem; font-weight: 600; background: var(--accent); color: #fff; border: 1px solid var(--accent); border-left: none; border-radius: 0; cursor: pointer; white-space: nowrap;"
+              >
+                Go {'>'}
+              </button>
+            </div>
+          </form>
+        </details>
+      </div>
 
       {/* ---- Embedded challenge (for crawling agents that parse HTML) ---- */}
       <script
@@ -249,6 +258,16 @@ export const VerifiedLandingPage: FC<{ version: string; solveTime?: number }> = 
           Your agent will ask for your email, create your app,<br/>
           and give you a link to your dashboard. You just click it.
         </p>
+      </div>
+
+      {/* ---- Returning user shortcut ---- */}
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <a
+          href="/dashboard/login"
+          style="font-size: 0.75rem; color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px;"
+        >
+          Already have an account? Go to dashboard
+        </a>
       </div>
 
       {/* ---- For developers ---- */}

@@ -705,7 +705,7 @@ export const DASHBOARD_CSS = `
   }
 
   .landing-footer {
-    text-align: center; padding: 2rem 0 0;
+    text-align: center; padding: 2rem 0 3rem;
     font-size: 0.6875rem; color: var(--text-dim);
   }
   .landing-footer a {
