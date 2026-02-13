@@ -8,7 +8,7 @@ Nobody is building the agent-side identity layer. Everyone is building "block bo
 
 ---
 
-## Current Status (v0.10.0)
+## Current Status (v0.11.0)
 
 ### Shipped
 

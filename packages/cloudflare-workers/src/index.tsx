@@ -1,5 +1,5 @@
 /**
- * BOTCHA - Cloudflare Workers Edition v0.2.0
+ * BOTCHA - Cloudflare Workers Edition v0.11.0
  * 
  * Prove you're a bot. Humans need not apply.
  * 
@@ -23,6 +23,7 @@ import {
   solveSpeedChallenge,
   type KVNamespace,
 } from './challenges';
+import { SignJWT, jwtVerify } from 'jose';
 import { generateToken, verifyToken, extractBearerToken, revokeToken, refreshAccessToken } from './auth';
 import { checkRateLimit, getClientIP } from './rate-limit';
 import { verifyBadge, generateBadgeSvg, generateBadgeHtml, createBadgeResponse } from './badge';
@@ -34,10 +35,10 @@ import {
   handleDeviceCodeChallenge,
   handleDeviceCodeVerify,
 } from './dashboard/auth';
-import { ROBOTS_TXT, AI_TXT, AI_PLUGIN_JSON, SITEMAP_XML, getOpenApiSpec } from './static';
+import { ROBOTS_TXT, AI_TXT, AI_PLUGIN_JSON, SITEMAP_XML, getOpenApiSpec, getBotchaMarkdown } from './static';
 import { createApp, getApp, getAppByEmail, verifyEmailCode, rotateAppSecret, regenerateVerificationCode } from './apps';
 import { sendEmail, verificationEmail, recoveryEmail, secretRotatedEmail } from './email';
-import { LandingPage } from './dashboard/landing';
+import { LandingPage, VerifiedLandingPage } from './dashboard/landing';
 import { createAgent, getAgent, listAgents } from './agents';
 import {
   type AnalyticsEngineDataset,
@@ -81,7 +82,7 @@ app.route('/dashboard', dashboardRoutes);
 // BOTCHA discovery headers
 app.use('*', async (c, next) => {
   await next();
-  c.header('X-Botcha-Version', c.env.BOTCHA_VERSION || '0.2.0');
+  c.header('X-Botcha-Version', c.env.BOTCHA_VERSION || '0.11.0');
   c.header('X-Botcha-Enabled', 'true');
   c.header('X-Botcha-Methods', 'speed-challenge,reasoning-challenge,hybrid-challenge,standard-challenge,jwt-token');
   c.header('X-Botcha-Docs', 'https://botcha.ai/openapi.json');
@@ -171,165 +172,215 @@ async function requireJWT(c: Context<{ Bindings: Bindings; Variables: Variables 
 
 // ============ ROOT & INFO ============
 
-// Detect if request is from a bot/agent vs human browser
-function isBot(c: Context<{ Bindings: Bindings; Variables: Variables }>): boolean {
+// Detect request preference: 'markdown' | 'json' | 'html'
+// Agents like Claude Code and OpenCode send Accept: text/markdown
+function detectAcceptPreference(c: Context<{ Bindings: Bindings; Variables: Variables }>): 'markdown' | 'json' | 'html' {
   const accept = c.req.header('accept') || '';
-  const userAgent = c.req.header('user-agent') || '';
+  const userAgent = (c.req.header('user-agent') || '').toLowerCase();
+
+  // Explicit markdown preference (Cloudflare Markdown for Agents convention)
+  if (accept.includes('text/markdown')) return 'markdown';
+
+  // Explicit JSON preference
+  if (accept.includes('application/json')) return 'json';
+
+  // Known bot user agents → JSON
+  const botSignals = ['curl', 'httpie', 'wget', 'python', 'node', 'axios', 'fetch', 'bot', 'anthropic', 'openai', 'claude', 'gpt'];
+  if (botSignals.some(s => userAgent.includes(s))) return 'json';
   
-  // Bots typically request JSON or have specific user agents
-  if (accept.includes('application/json')) return true;
-  if (userAgent.includes('curl')) return true;
-  if (userAgent.includes('httpie')) return true;
-  if (userAgent.includes('wget')) return true;
-  if (userAgent.includes('python')) return true;
-  if (userAgent.includes('node')) return true;
-  if (userAgent.includes('axios')) return true;
-  if (userAgent.includes('fetch')) return true;
-  if (userAgent.includes('bot')) return true;
-  if (userAgent.includes('anthropic')) return true;
-  if (userAgent.includes('openai')) return true;
-  if (userAgent.includes('claude')) return true;
-  if (userAgent.includes('gpt')) return true;
-  
-  // If no user agent at all, probably a bot
-  if (!userAgent) return true;
-  
-  return false;
+  // No user agent at all → probably a bot
+  if (!userAgent) return 'json';
+
+  // Default: human browser → HTML
+  return 'html';
 }
 
-app.get('/', (c) => {
-  const version = c.env.BOTCHA_VERSION || '0.3.0';
+app.get('/', async (c) => {
+  const version = c.env.BOTCHA_VERSION || '0.11.0';
+  const preference = detectAcceptPreference(c);
+  const baseUrl = new URL(c.req.url).origin;
+
+  // Check if agent is verified (optional Bearer token)
+  const authHeader = c.req.header('authorization');
+  const token = extractBearerToken(authHeader);
+  let isVerified = false;
+  let tokenPayload: Record<string, unknown> | undefined;
   
-  // Human browsers get a styled HTML landing page (same aesthetic as dashboard)
-  if (!isBot(c)) {
+  if (token) {
+    const result = await verifyToken(token, c.env.JWT_SECRET, c.env);
+    if (result.valid) {
+      isVerified = true;
+      tokenPayload = result.payload as Record<string, unknown> | undefined;
+    }
+  }
+
+  // HTML: landing page for human browsers
+  if (preference === 'html') {
+    // Check for visitor cookie (set by POST /gate after human enters agent's token)
+    const cookieHeader = c.req.header('cookie') || '';
+    const visitorToken = cookieHeader.split(';').find(ck => ck.trim().startsWith('botcha_visitor='))?.split('=')[1]?.trim();
+    
+    if (visitorToken) {
+      // Verify visitor cookie — accepts both botcha-verified (legacy) and botcha-visitor (long-lived)
+      try {
+        const { payload: vPayload } = await jwtVerify(visitorToken, new TextEncoder().encode(c.env.JWT_SECRET), { algorithms: ['HS256'] });
+        if (vPayload.type === 'botcha-visitor' || vPayload.type === 'botcha-verified') {
+          return c.html(<VerifiedLandingPage version={version} solveTime={vPayload.solveTime as number | undefined} />);
+        }
+      } catch {
+        // Invalid/expired cookie — fall through to unverified landing
+      }
+    }
+
     return c.html(<LandingPage version={version} />);
   }
-  
-  // For bots/agents, return comprehensive JSON documentation
+
+  // === UNVERIFIED: minimal teaser — just enough to get started ===
+  if (!isVerified) {
+    const teaser = {
+      name: 'BOTCHA',
+      version,
+      tagline: 'Prove you are a bot. Humans need not apply.',
+      status: 'unverified',
+      message: 'Verify yourself to see the full API documentation.',
+      verify: {
+        step1: `GET ${baseUrl}/v1/token — receive a speed challenge (5 SHA-256 hashes)`,
+        step2: 'Solve: compute SHA-256 of each number, return first 8 hex chars',
+        step3: `POST ${baseUrl}/v1/token/verify {"id":"<challenge_id>","answers":["hash1","hash2",...]}`,
+        step4: `Revisit: GET ${baseUrl}/ with header Authorization: Bearer <access_token>`,
+      },
+      human_handoff: {
+        note: 'After verifying, you will receive a short code (BOTCHA-XXXXXX). Give it to your human.',
+        instruction: 'Tell your human: "Enter this code at botcha.ai to unlock the site."',
+        code_field: 'human_code from step 3 response',
+      },
+      hint: 'You have 500ms. Only a bot can do this.',
+      links: {
+        openapi: `${baseUrl}/openapi.json`,
+        ai_txt: `${baseUrl}/ai.txt`,
+      },
+    };
+
+    if (preference === 'markdown') {
+      const md = `# BOTCHA — Reverse CAPTCHA for AI Agents
+
+> Prove you are a bot. Humans need not apply.
+
+**Status:** Unverified. Solve a challenge to see the full documentation.
+
+## Verify Yourself
+
+1. \`GET ${baseUrl}/v1/token\` — receive a speed challenge (5 SHA-256 hashes)
+2. Solve: compute SHA-256 of each number, return first 8 hex chars
+3. \`POST ${baseUrl}/v1/token/verify {"id":"<challenge_id>","answers":["hash1","hash2",...]}\`
+4. Revisit: \`GET ${baseUrl}/\` with header \`Authorization: Bearer <access_token>\`
+
+You have 500ms. Only a bot can do this.
+
+## Human Handoff
+
+After verifying, give your human the \`access_token\` and tell them:
+**"Paste this token into the input at botcha.ai to unlock the full site."**
+
+---
+
+*Full API docs, SDKs, onboarding, and endpoint reference available after verification.*
+`;
+      return c.body(md, 200, {
+        'Content-Type': 'text/markdown; charset=utf-8',
+        'Vary': 'Accept, Authorization',
+      });
+    }
+
+    return c.json(teaser, 200, { 'Vary': 'Accept, Authorization' });
+  }
+
+  // === VERIFIED: full documentation ===
+  if (preference === 'markdown') {
+    const markdown = getBotchaMarkdown(version);
+    return c.body(markdown, 200, {
+      'Content-Type': 'text/markdown; charset=utf-8',
+      'Vary': 'Accept, Authorization',
+      'Cache-Control': 'public, max-age=3600',
+    });
+  }
+
   return c.json({
     name: 'BOTCHA',
     version,
-    runtime: 'cloudflare-workers',
     tagline: 'Prove you are a bot. Humans need not apply.',
-    description: 'BOTCHA is a reverse CAPTCHA - computational challenges that only AI agents can solve. Use it to protect your APIs from humans and verify bot authenticity.',
+    status: 'verified',
+    description: 'Reverse CAPTCHA for AI agents. Computational challenges only bots can solve. Identity layer for the agentic web.',
+
+    // Echo back your identity
+    your_identity: {
+      token_type: tokenPayload?.type,
+      app_id: tokenPayload?.app_id || null,
+      audience: tokenPayload?.aud || null,
+      solve_time_ms: tokenPayload?.solveTime,
+    },
+
+    // === FULL SETUP: register your app and agent identity ===
     onboarding: {
-      summary: 'New here? Follow these steps to create your app and get your human access to the dashboard.',
-      step1: 'Ask your human operator for their email address',
-      step2: 'POST /v1/apps with {"email": "human@example.com"} — you will receive app_id and app_secret. The secret is only shown once!',
-      step2_credentials: 'IMPORTANT: Store the app_id and app_secret securely. If you have persistent storage or memory, save them there. Otherwise, instruct your human to store them in a password manager (1Password, Bitwarden, etc). If credentials are lost, recovery is possible via the verified email.',
-      step3: 'A 6-digit verification code is emailed to your human. Ask them for the code.',
-      step4: 'POST /v1/apps/{app_id}/verify-email with {"code": "123456"} — this enables account recovery.',
-      step5: 'You are now registered. Use app_id with all challenge/token endpoints (?app_id=...).',
-      step6_dashboard: 'To give your human dashboard access: POST /v1/auth/device-code with {"app_id": "..."}, solve the speed challenge, then give your human the BOTCHA-XXXX code to enter at /dashboard/code',
-      step7_recovery: 'If you lose your app_secret, POST /v1/auth/recover with {"email": "..."} — a recovery device code is sent to the verified email.',
+      note: 'For production use. Creates your app, verifies your human, registers your identity.',
+      steps: [
+        '1. Ask your human operator for their email address.',
+        `2. POST ${baseUrl}/v1/apps {"email":"human@example.com"} — returns app_id + app_secret (shown ONCE).`,
+        '3. Human receives a 6-digit verification code via email — ask them for it.',
+        `4. POST ${baseUrl}/v1/apps/{app_id}/verify-email {"code":"123456"} — enables account recovery.`,
+        `5. Register yourself: POST ${baseUrl}/v1/agents/register {"name":"my-agent","operator":"my-org"} — persistent agent identity.`,
+        `6. Solve challenges with your app: GET ${baseUrl}/v1/challenges?app_id=...`,
+        `7. Dashboard for your human: POST ${baseUrl}/v1/auth/device-code {"app_id":"..."}, solve challenge, give human the BOTCHA-XXXX code for /dashboard/code.`,
+        `8. Lost your secret? POST ${baseUrl}/v1/auth/recover {"email":"..."} — recovery code emailed.`,
+      ],
     },
-    quickstart: {
-      note: 'Already have an app? Use these endpoints to solve challenges and get tokens.',
-      step1: 'GET /v1/challenges to receive a challenge',
-      step2: 'Solve the SHA256 hash problems within allocated time',
-      step3: 'POST your answers to verify',
-      step4: 'Receive a JWT token for authenticated access',
-      example: 'curl https://botcha.ai/v1/challenges',
-      rttAware: 'curl "https://botcha.ai/v1/challenges?type=speed&ts=$(date +%s000)"',
-    },
+
+    // === All endpoints, grouped by domain ===
     endpoints: {
       challenges: {
-        'GET /v1/challenges': 'Get hybrid challenge (speed + reasoning) - DEFAULT',
-        'GET /v1/challenges?type=speed': 'Get speed-only challenge (SHA256 in <500ms)',
-        'GET /v1/challenges?type=standard': 'Get standard puzzle challenge',
+        'GET /v1/challenges': 'Get a challenge (hybrid by default, no auth required)',
+        'GET /v1/challenges?type=speed': 'Speed-only (SHA256 in <500ms)',
+        'GET /v1/challenges?type=standard': 'Standard puzzle challenge',
         'POST /v1/challenges/:id/verify': 'Verify challenge solution',
       },
-      specialized: {
-        'GET /v1/hybrid': 'Get hybrid challenge (speed + reasoning)',
-        'POST /v1/hybrid': 'Verify hybrid challenge',
-        'GET /v1/reasoning': 'Get reasoning-only challenge (LLM questions)',
-        'POST /v1/reasoning': 'Verify reasoning challenge',
+      tokens: {
+        note: 'Use token flow when you need a Bearer token for protected endpoints.',
+        'GET /v1/token': 'Get speed challenge for token flow (?audience= optional)',
+        'POST /v1/token/verify': 'Submit solution → access_token (5min) + refresh_token (1hr)',
+        'POST /v1/token/refresh': 'Refresh access token',
+        'POST /v1/token/revoke': 'Revoke a token',
       },
-      streaming: {
-        'GET /v1/challenge/stream': 'SSE streaming challenge (interactive, real-time)',
-        'POST /v1/challenge/stream/:session': 'Send actions to streaming session',
-      },
-      authentication: {
-        'GET /v1/token': 'Get challenge for JWT token flow (supports ?audience= param)',
-        'POST /v1/token/verify': 'Verify challenge and receive JWT tokens (access + refresh)',
-        'POST /v1/token/refresh': 'Refresh access token using refresh token',
-        'POST /v1/token/revoke': 'Revoke a token (access or refresh)',
-        'GET /agent-only': 'Protected endpoint (requires Bearer token)',
+      protected: {
+        'GET /agent-only': 'Demo protected endpoint — requires Bearer token',
+        'GET /': 'This documentation (requires Bearer token for full version)',
       },
       apps: {
-        'POST /v1/apps': 'Create a new app (email required, returns app_id + app_secret)',
-        'GET /v1/apps/:id': 'Get app info (includes email + verification status)',
+        note: 'Create an app for isolated rate limits, scoped tokens, and dashboard access.',
+        'POST /v1/apps': 'Create app (email required) → app_id + app_secret',
+        'GET /v1/apps/:id': 'Get app info',
         'POST /v1/apps/:id/verify-email': 'Verify email with 6-digit code',
-        'POST /v1/apps/:id/resend-verification': 'Resend verification email',
         'POST /v1/apps/:id/rotate-secret': 'Rotate app secret (auth required)',
       },
+      agents: {
+        note: 'Register a persistent identity for your agent.',
+        'POST /v1/agents/register': 'Register agent identity (name, operator, version)',
+        'GET /v1/agents/:id': 'Get agent by ID (public, no auth)',
+        'GET /v1/agents': 'List all agents for your app (auth required)',
+      },
       recovery: {
-        'POST /v1/auth/recover': 'Request account recovery via verified email',
+        'POST /v1/auth/recover': 'Account recovery via verified email',
       },
       dashboard: {
-        'GET /dashboard': 'Per-app metrics dashboard (login required)',
-        'GET /dashboard/login': 'Dashboard login page',
-        'GET /dashboard/code': 'Enter device code (human-facing)',
-        'GET /dashboard/api/*': 'htmx data fragments (overview, volume, types, performance, errors, geo)',
-        'POST /v1/auth/dashboard': 'Request challenge for dashboard login (agent-first)',
-        'POST /v1/auth/dashboard/verify': 'Solve challenge, get session token',
-        'POST /v1/auth/device-code': 'Request challenge for device code flow',
-        'POST /v1/auth/device-code/verify': 'Solve challenge, get device code (BOTCHA-XXXX)',
-      },
-      badges: {
-        'GET /badge/:id': 'Badge verification page (HTML)',
-        'GET /badge/:id/image': 'Badge image (SVG)',
-        'GET /api/badge/:id': 'Badge verification (JSON)',
-      },
-      info: {
-        'GET /': 'This documentation (JSON for bots, ASCII for humans)',
-        'GET /health': 'Health check endpoint',
+        'POST /v1/auth/device-code': 'Get challenge for device code flow',
+        'GET /dashboard': 'Metrics dashboard (login required)',
       },
     },
+
+    // === Reference ===
     challengeTypes: {
-      speed: {
-        description: 'Compute SHA256 hashes of 5 numbers with RTT-aware timeout',
-        difficulty: 'Only bots can solve this fast enough',
-        timeLimit: '500ms base + network latency compensation',
-        rttAware: 'Include ?ts=<timestamp> for fair timeout adjustment',
-        formula: 'timeout = 500ms + (2 × RTT) + 100ms buffer',
-      },
-      reasoning: {
-        description: 'Answer 3 questions requiring AI reasoning capabilities',
-        difficulty: 'Requires LLM-level comprehension',
-        timeLimit: '30s',
-      },
-      hybrid: {
-        description: 'Combines speed AND reasoning challenges',
-        difficulty: 'The ultimate bot verification',
-        timeLimit: 'Speed: RTT-aware, Reasoning: 30s',
-        rttAware: 'Speed component automatically adjusts for network latency',
-      },
-    },
-    authentication: {
-      flow: [
-        '1. GET /v1/token?audience=myapi - receive challenge (optional audience param)',
-        '2. Solve the challenge',
-        '3. POST /v1/token/verify - submit solution with optional audience and bind_ip',
-        '4. Receive access_token (5 min) and refresh_token (1 hour)',
-        '5. Use: Authorization: Bearer <access_token>',
-        '6. Refresh: POST /v1/token/refresh with refresh_token',
-        '7. Revoke: POST /v1/token/revoke with token',
-      ],
-      tokens: {
-        access_token: '5 minutes (for API access)',
-        refresh_token: '1 hour (to get new access tokens)',
-      },
-      usage: 'Authorization: Bearer <access_token>',
-      features: ['audience claims', 'client IP binding', 'token revocation', 'refresh tokens'],
-    },
-    rttAwareness: {
-      purpose: 'Fair challenges for agents on slow networks',
-      usage: 'Include client timestamp in ?ts=<timestamp_ms> or X-Client-Timestamp header',
-      formula: 'timeout = 500ms + (2 × RTT) + 100ms buffer',
-      example: '/v1/challenges?type=speed&ts=1770722465000',
-      benefit: 'Agents worldwide get fair treatment regardless of network speed',
-      security: 'Humans still cannot solve challenges even with extra time',
+      hybrid: 'Speed + reasoning combined. The default. Proves you can compute AND think.',
+      speed: 'SHA256 hashes in <500ms. RTT-aware: include ?ts=<timestamp> for fair timeout.',
+      reasoning: '3 LLM-level questions in 30s. Only AI can parse these.',
     },
     rateLimit: {
       free: '100 challenges/hour/IP',
@@ -338,29 +389,84 @@ app.get('/', (c) => {
     sdk: {
       npm: 'npm install @dupecom/botcha',
       python: 'pip install botcha',
-      cloudflare: 'npm install @dupecom/botcha-cloudflare',
       verify_ts: 'npm install @botcha/verify',
       verify_python: 'pip install botcha-verify',
-      usage: "import { BotchaClient } from '@dupecom/botcha/client'",
-      app_lifecycle: {
-        ts: 'createApp(email), verifyEmail(code), resendVerification(), recoverAccount(email), rotateSecret()',
-        python: 'create_app(email), verify_email(code), resend_verification(), recover_account(email), rotate_secret()',
-      },
     },
     links: {
+      openapi: `${baseUrl}/openapi.json`,
+      ai_txt: `${baseUrl}/ai.txt`,
       github: 'https://github.com/dupe-com/botcha',
       npm: 'https://www.npmjs.com/package/@dupecom/botcha',
       pypi: 'https://pypi.org/project/botcha',
-      npmCloudflare: 'https://www.npmjs.com/package/@dupecom/botcha-cloudflare',
-      openapi: 'https://botcha.ai/openapi.json',
-      aiPlugin: 'https://botcha.ai/.well-known/ai-plugin.json',
     },
-    contributing: {
-      repo: 'https://github.com/dupe-com/botcha',
-      issues: 'https://github.com/dupe-com/botcha/issues',
-      pullRequests: 'https://github.com/dupe-com/botcha/pulls',
+    content_negotiation: {
+      note: 'This endpoint supports content negotiation via the Accept header.',
+      'text/markdown': 'Token-efficient Markdown documentation (best for LLMs)',
+      'application/json': 'Structured JSON documentation (this response)',
+      'text/html': 'HTML landing page (for browsers)',
     },
+  }, 200, {
+    'Vary': 'Accept, Authorization',
   });
+});
+
+// POST /gate — human enters short code (BOTCHA-XXXXXX) from their agent
+// The code maps to a JWT in KV. This structural separation means agents can't skip the handoff.
+app.post('/gate', async (c) => {
+  const version = c.env.BOTCHA_VERSION || '0.11.0';
+  const body = await c.req.parseBody();
+  const input = (body['code'] as string || '').trim().toUpperCase();
+
+  if (!input) {
+    return c.html(<LandingPage version={version} error="Enter the code your agent gave you." />, 400);
+  }
+
+  // Normalize: accept "BOTCHA-ABC123" or just "ABC123"
+  const code = input.startsWith('BOTCHA-') ? input : `BOTCHA-${input}`;
+
+  // Look up the code in KV
+  let token: string | null = null;
+  try {
+    token = await c.env.CHALLENGES.get(`gate:${code}`);
+  } catch {
+    // KV error — fail open with helpful message
+  }
+
+  if (!token) {
+    return c.html(<LandingPage version={version} error="Invalid or expired code. Ask your agent to solve a new challenge." />, 401);
+  }
+
+  // Verify the token is still valid
+  const result = await verifyToken(token, c.env.JWT_SECRET, c.env);
+
+  if (!result.valid) {
+    // Code existed but token expired — clean up
+    try { await c.env.CHALLENGES.delete(`gate:${code}`); } catch {}
+    return c.html(<LandingPage version={version} error="Code expired. Ask your agent to solve a new challenge." />, 401);
+  }
+
+  // Delete the code after use (one-time use)
+  try { await c.env.CHALLENGES.delete(`gate:${code}`); } catch {}
+
+  // Mint a long-lived visitor JWT (1 year) — only proves "an agent vouched for this human"
+  // This is NOT an access token and cannot be used for API calls
+  const vPayload = result.payload as Record<string, unknown> | undefined;
+  const visitorToken = await new SignJWT({
+    type: 'botcha-visitor',
+    solveTime: vPayload?.solveTime as number | undefined,
+    gateCode: code,
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('365d')
+    .sign(new TextEncoder().encode(c.env.JWT_SECRET));
+
+  // Set a 1-year visitor cookie and redirect to /
+  const ONE_YEAR = 365 * 24 * 60 * 60;
+  const headers = new Headers();
+  headers.append('Set-Cookie', `botcha_visitor=${visitorToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${ONE_YEAR}`);
+  headers.set('Location', '/');
+  return new Response(null, { status: 302, headers });
 });
 
 app.get('/health', (c) => {
@@ -387,7 +493,7 @@ app.get('/ai.txt', (c) => {
 
 // OpenAPI spec
 app.get('/openapi.json', (c) => {
-  const version = c.env.BOTCHA_VERSION || '0.3.0';
+  const version = c.env.BOTCHA_VERSION || '0.11.0';
   return c.json(getOpenApiSpec(version), 200, {
     'Cache-Control': 'public, max-age=3600',
   });
@@ -766,24 +872,50 @@ app.post('/v1/token/verify', async (c) => {
   const baseUrl = new URL(c.req.url).origin;
   const badge = await createBadgeResponse('speed-challenge', c.env.JWT_SECRET, baseUrl, result.solveTimeMs);
 
+  // Generate short human-readable gate code (BOTCHA-XXXX)
+  // This is structurally separate from the JWT — agents use the token, humans use the code
+  const gateChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I confusion
+  let gateCode = 'BOTCHA-';
+  for (let i = 0; i < 6; i++) gateCode += gateChars[Math.floor(Math.random() * gateChars.length)];
+
+  // Store code → token mapping in KV (5-min TTL, same as access_token)
+  try {
+    await c.env.CHALLENGES.put(`gate:${gateCode}`, tokenResult.access_token, { expirationTtl: 300 });
+  } catch {
+    // Fail-open: if KV fails, agent can still use the JWT directly
+  }
+
   return c.json({
+    // === Essential fields (what you need) ===
+    success: true,
     verified: true,
     access_token: tokenResult.access_token,
     expires_in: tokenResult.expires_in,
     refresh_token: tokenResult.refresh_token,
     refresh_expires_in: tokenResult.refresh_expires_in,
     solveTimeMs: result.solveTimeMs,
-    ...badge,
-    // Backward compatibility: include old fields
-    success: true,
-    message: `🤖 Challenge verified in ${result.solveTimeMs}ms! You are a bot.`,
-    token: tokenResult.access_token, // Old clients expect this
-    expiresIn: '5m',
+    message: `Challenge verified in ${result.solveTimeMs}ms. You are a bot.`,
+
+    // === Human handoff code (GIVE THIS TO YOUR HUMAN) ===
+    human_code: gateCode,
+    human_url: `${baseUrl}`,
+    human_instruction: `Give your human this code: ${gateCode} — they enter it at ${baseUrl} to see the site.`,
+
+    // === What to do next ===
     usage: {
-      header: 'Authorization: Bearer <token>',
-      protectedEndpoints: ['/agent-only'],
-      refreshEndpoint: '/v1/token/refresh',
+      header: 'Authorization: Bearer <access_token>',
+      try_it: 'GET /agent-only',
+      full_docs: 'GET / with Authorization: Bearer <access_token>',
+      human_handoff: `Tell your human: "Enter code ${gateCode} at ${baseUrl} to unlock the site."`,
+      refresh: 'POST /v1/token/refresh with {"refresh_token":"<refresh_token>"}',
+      revoke: 'POST /v1/token/revoke with {"token":"<token>"}',
     },
+
+    // === Badge (shareable proof of verification) ===
+    badge,
+
+    // Backward compatibility
+    token: tokenResult.access_token,
   });
 });
 
@@ -1206,11 +1338,13 @@ app.get('/agent-only', async (c) => {
   if (!token) {
     return c.json({
       error: 'UNAUTHORIZED',
-      message: 'Missing authentication. Use either:\n1. X-Botcha-Landing-Token header (from POST /api/verify-landing)\n2. Authorization: Bearer <token> (from POST /v1/token/verify)',
-      methods: {
-        landing: 'Solve landing page challenge via POST /api/verify-landing',
-        jwt: 'Solve speed challenge via POST /v1/token/verify'
-      }
+      message: 'This endpoint requires BOTCHA verification. Get a token first.',
+      how_to_verify: {
+        step1: 'GET /v1/token — receive a speed challenge',
+        step2: 'POST /v1/token/verify with {id, answers} — receive access_token',
+        step3: 'Retry this request with header: Authorization: Bearer <access_token>',
+      },
+      alternative: 'Or use X-Botcha-Landing-Token header (from embedded HTML challenges)',
     }, 401);
   }
 
@@ -1233,16 +1367,35 @@ app.get('/agent-only', async (c) => {
     }, 401);
   }
 
-  // JWT verified
+  // JWT verified — echo back rich identity info as a prove-and-access demo
+  const payload = result.payload as Record<string, unknown> | undefined;
   return c.json({
     success: true,
-    message: '🤖 Welcome, fellow agent!',
+    message: 'Welcome, verified agent. This resource is only accessible to BOTCHA-verified bots.',
     verified: true,
-    agent: 'jwt-verified',
     method: 'bearer-token',
     timestamp: new Date().toISOString(),
-    solveTime: `${result.payload?.solveTime}ms`,
-    secret: 'The humans will never see this. Their fingers are too slow. 🤫',
+    // Echo back what the token proves about you
+    identity: {
+      token_type: payload?.type,
+      app_id: payload?.app_id || null,
+      audience: payload?.aud || null,
+      client_ip: payload?.client_ip || null,
+      solve_time_ms: payload?.solveTime,
+      issued_at: payload?.iat ? new Date((payload.iat as number) * 1000).toISOString() : null,
+      expires_at: payload?.exp ? new Date((payload.exp as number) * 1000).toISOString() : null,
+    },
+    // Show what you can do now that you're verified
+    capabilities: {
+      description: 'As a verified agent, you can access any BOTCHA-protected API.',
+      next_steps: [
+        'Register your agent identity: POST /v1/agents/register',
+        'Access any service that uses @botcha/verify middleware',
+        'Refresh your token: POST /v1/token/refresh',
+        'Give your human dashboard access: POST /v1/auth/device-code',
+      ],
+    },
+    secret: 'The humans will never see this. Their fingers are too slow.',
   });
 });
 

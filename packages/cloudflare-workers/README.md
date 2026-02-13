@@ -1,18 +1,19 @@
 # @dupecom/botcha-cloudflare
 
-> 🤖 **BOTCHA** - Prove you're a bot. Humans need not apply.
+> **BOTCHA** - Prove you're a bot. Humans need not apply.
 > 
-> **Cloudflare Workers Edition v0.2.0** - Production-ready with JWT & Rate Limiting
+> **Cloudflare Workers Edition v0.11.0** - Identity layer for AI agents
 
 Reverse CAPTCHA that verifies AI agents and blocks humans. Running at the edge.
 
-## 🚀 What's New in v0.2.0
+## What's New in v0.11.0
 
-- ✅ **JWT Token Authentication** - Secure token-based auth flow with 1-hour expiry
-- ✅ **Rate Limiting** - 100 challenges/hour/IP with proper headers
-- ✅ **KV Storage** - Challenge state stored in Cloudflare KV (prevents replay attacks)
-- ✅ **Versioned API** - New `/v1/*` endpoints with backward-compatible legacy routes
-- ✅ **Production Ready** - Enterprise-grade auth and security
+- **Agent Registry** - Persistent agent identities (POST /v1/agents/register)
+- **Email-tied apps** - Email verification, account recovery, secret rotation
+- **Dashboard** - Per-app metrics with agent-first auth (device code flow)
+- **JWT security** - 5-min access tokens, refresh tokens, audience claims, IP binding, revocation
+- **Multi-tenant** - Per-app isolation, scoped tokens, rate limiting
+- **Server-side SDKs** - @botcha/verify (TS) + botcha-verify (Python)
 
 ## Features
 

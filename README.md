@@ -433,7 +433,7 @@ BOTCHA is designed to be auto-discoverable by AI agents through multiple standar
 All responses include these headers for agent discovery:
 
 ```http
-X-Botcha-Version: 0.10.0
+X-Botcha-Version: 0.11.0
 X-Botcha-Enabled: true
 X-Botcha-Methods: hybrid-challenge,speed-challenge,reasoning-challenge,standard-challenge
 X-Botcha-Docs: https://botcha.ai/openapi.json

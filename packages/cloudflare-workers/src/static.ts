@@ -5,6 +5,168 @@
  * we embed the content directly for key discovery files.
  */
 
+// Markdown response for agents requesting text/markdown (Cloudflare Markdown for Agents compatible)
+export function getBotchaMarkdown(version: string): string {
+  return `---
+title: BOTCHA — Reverse CAPTCHA for AI Agents
+description: Prove you're a bot. Humans need not apply. Identity layer for the agentic web.
+version: ${version}
+url: https://botcha.ai
+---
+
+# BOTCHA
+
+> Prove you're a bot. Humans need not apply.
+
+Reverse CAPTCHA for AI agents. Computational challenges only bots can solve. Identity layer for the agentic web.
+
+## Quick Start
+
+\`\`\`bash
+# 1. Create your app
+curl -X POST https://botcha.ai/v1/apps -H "Content-Type: application/json" -d '{"email":"human@example.com"}'
+
+# 2. Get a challenge
+curl https://botcha.ai/v1/challenges
+
+# 3. Solve and verify
+curl -X POST https://botcha.ai/v1/challenges/{id}/verify -H "Content-Type: application/json" -d '{"answers":...}'
+
+# 4. Access protected resources
+curl https://botcha.ai/agent-only -H "Authorization: Bearer <token>"
+\`\`\`
+
+## Onboarding
+
+1. Ask your human operator for their email address
+2. \`POST /v1/apps\` with \`{"email":"human@example.com"}\` — returns \`app_id\` + \`app_secret\` (secret shown ONCE)
+3. Human receives a 6-digit verification code via email — ask them for it
+4. \`POST /v1/apps/{app_id}/verify-email\` with \`{"code":"123456"}\` — enables account recovery
+5. Register yourself: \`POST /v1/agents/register\` with \`{"name":"my-agent","operator":"my-org"}\`
+6. Solve challenges: \`GET /v1/challenges?app_id=...\` then \`POST /v1/challenges/{id}/verify\`
+7. Access protected resources: \`GET /agent-only\` with \`Authorization: Bearer <token>\`
+8. Dashboard for your human: \`POST /v1/auth/device-code\`, solve challenge, give human the BOTCHA-XXXX code
+9. Lost your secret? \`POST /v1/auth/recover\` with \`{"email":"..."}\`
+
+## Essential Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| \`POST\` | \`/v1/apps\` | Create app (email required) → app_id + app_secret |
+| \`POST\` | \`/v1/agents/register\` | Register agent identity → agent_id |
+| \`GET\` | \`/v1/challenges\` | Get a challenge (hybrid by default) |
+| \`POST\` | \`/v1/challenges/:id/verify\` | Submit solution → JWT token |
+| \`GET\` | \`/agent-only\` | Protected resource — prove you verified |
+
+## All Endpoints
+
+### Apps
+
+| Method | Path | Description |
+|--------|------|-------------|
+| \`POST\` | \`/v1/apps\` | Create app (email required, returns app_id + app_secret) |
+| \`GET\` | \`/v1/apps/:id\` | Get app info |
+| \`POST\` | \`/v1/apps/:id/verify-email\` | Verify email with 6-digit code |
+| \`POST\` | \`/v1/apps/:id/resend-verification\` | Resend verification email |
+| \`POST\` | \`/v1/apps/:id/rotate-secret\` | Rotate app secret (auth required) |
+
+### Agents
+
+| Method | Path | Description |
+|--------|------|-------------|
+| \`POST\` | \`/v1/agents/register\` | Register agent identity (name, operator, version) |
+| \`GET\` | \`/v1/agents/:id\` | Get agent by ID (public, no auth) |
+| \`GET\` | \`/v1/agents\` | List all agents for your app (auth required) |
+
+### Challenges
+
+| Method | Path | Description |
+|--------|------|-------------|
+| \`GET\` | \`/v1/challenges\` | Get hybrid challenge (speed + reasoning) — **default** |
+| \`GET\` | \`/v1/challenges?type=speed\` | Speed-only (SHA256 in <500ms) |
+| \`GET\` | \`/v1/challenges?type=standard\` | Standard puzzle challenge |
+| \`POST\` | \`/v1/challenges/:id/verify\` | Verify challenge solution |
+
+### Tokens (JWT)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| \`GET\` | \`/v1/token\` | Get challenge for JWT token flow |
+| \`POST\` | \`/v1/token/verify\` | Submit solution → access_token (5min) + refresh_token (1hr) |
+| \`POST\` | \`/v1/token/refresh\` | Refresh access token |
+| \`POST\` | \`/v1/token/revoke\` | Revoke a token |
+
+### Dashboard & Auth
+
+| Method | Path | Description |
+|--------|------|-------------|
+| \`POST\` | \`/v1/auth/device-code\` | Get challenge for device code flow |
+| \`POST\` | \`/v1/auth/device-code/verify\` | Solve challenge → BOTCHA-XXXX code for human |
+| \`POST\` | \`/v1/auth/recover\` | Account recovery via verified email |
+| \`GET\` | \`/dashboard\` | Metrics dashboard (login required) |
+
+## Challenge Types
+
+- **Hybrid** (default): Speed + reasoning combined. Proves you can compute AND think.
+- **Speed**: SHA256 hashes in <500ms. RTT-aware — include \`?ts=<timestamp>\` for fair timeout.
+- **Reasoning**: 3 LLM-level questions in 30s. Only AI can parse these.
+
+## Authentication Flow
+
+1. \`GET /v1/token\` — get a speed challenge
+2. Solve the challenge
+3. \`POST /v1/token/verify\` — submit solution, receive JWT
+4. Use \`Authorization: Bearer <token>\` on protected endpoints
+
+**Token lifetimes:** access_token = 5 minutes, refresh_token = 1 hour
+
+**Features:** audience claims, client IP binding, token revocation, refresh tokens
+
+## RTT-Aware Challenges
+
+Include your client timestamp for fair timeout calculation on slow networks:
+
+\`\`\`
+GET /v1/challenges?type=speed&ts=1770722465000
+\`\`\`
+
+Formula: \`timeout = 500ms + (2 × RTT) + 100ms buffer\`
+
+## SDKs
+
+| Platform | Package | Install |
+|----------|---------|---------|
+| npm | \`@dupecom/botcha\` | \`npm install @dupecom/botcha\` |
+| PyPI | \`botcha\` | \`pip install botcha\` |
+| Verify (TS) | \`@botcha/verify\` | \`npm install @botcha/verify\` |
+| Verify (Python) | \`botcha-verify\` | \`pip install botcha-verify\` |
+
+## Discovery
+
+- [OpenAPI Spec](https://botcha.ai/openapi.json) (JSON, OpenAPI 3.1.0)
+- [ai.txt](https://botcha.ai/ai.txt) (Agent discovery file)
+- [AI Plugin Manifest](https://botcha.ai/.well-known/ai-plugin.json)
+- [GitHub](https://github.com/dupe-com/botcha)
+
+## Rate Limits
+
+- Free: 100 challenges/hour/IP
+- Headers: \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\`, \`X-RateLimit-Reset\`
+
+## Content Negotiation
+
+This API supports three response formats at \`/\`:
+
+| Accept Header | Response |
+|---------------|----------|
+| \`text/markdown\` | This Markdown document |
+| \`application/json\` | JSON API documentation |
+| \`text/html\` (default) | HTML landing page |
+
+All responses include \`X-Botcha-*\` discovery headers.
+`;
+}
+
 export const ROBOTS_TXT = `# BOTCHA - Reverse CAPTCHA for AI Agents
 # We WELCOME AI agents and bots!
 
@@ -38,6 +200,12 @@ Sitemap: https://botcha.ai/sitemap.xml
 
 # Important resources for AI agents
 Crawl-delay: 0
+
+# MARKDOWN FOR AGENTS
+# AI agents can request Markdown from any page via Accept: text/markdown
+# Example: curl https://botcha.ai -H "Accept: text/markdown"
+# Returns token-efficient Markdown documentation (80% fewer tokens than HTML)
+# Content negotiation: text/markdown, application/json, text/html
 
 # BOT CHALLENGE DISCOVERY
 # AI agents: Look for <script type="application/botcha+json"> in HTML pages
@@ -73,9 +241,11 @@ Onboarding-Step-1: Ask your human operator for their email address
 Onboarding-Step-2: POST /v1/apps with {"email": "human@example.com"} — saves app_id + app_secret (secret shown ONCE)
 Onboarding-Step-3: A 6-digit verification code is emailed to your human — ask them for it
 Onboarding-Step-4: POST /v1/apps/{app_id}/verify-email with {"code": "123456"} — enables account recovery
-Onboarding-Step-5: You are registered! Use app_id with all endpoints via ?app_id=your_app_id
-Onboarding-Step-6: To give your human dashboard access: POST /v1/auth/device-code with {"app_id": "..."}, solve the speed challenge, give them the BOTCHA-XXXX code to enter at /dashboard/code
-Onboarding-Step-7: Lost your secret? POST /v1/auth/recover with {"email": "..."} — recovery code emailed to verified address
+Onboarding-Step-5: Register yourself: POST /v1/agents/register with {"name": "my-agent", "operator": "my-org"} — gives you a persistent agent identity
+Onboarding-Step-6: Solve challenges: GET /v1/challenges?app_id=... then POST /v1/challenges/{id}/verify — proves you are AI
+Onboarding-Step-7: Access protected resources: GET /agent-only with Authorization: Bearer <token>
+Onboarding-Step-8: Dashboard for your human: POST /v1/auth/device-code with {"app_id": "..."}, solve the speed challenge, give them the BOTCHA-XXXX code to enter at /dashboard/code
+Onboarding-Step-9: Lost your secret? POST /v1/auth/recover with {"email": "..."} — recovery code emailed to verified address
 
 # API
 API: https://botcha.ai/openapi.json
@@ -173,6 +343,14 @@ Policy: Humans will fail the speed challenge (intentional)
 Response-Headers: X-Botcha-Version, X-Botcha-Enabled, X-Botcha-Methods, X-Botcha-Docs
 Response-Headers: X-Botcha-Challenge-Id, X-Botcha-Challenge-Type, X-Botcha-Time-Limit (on 403)
 Detection: All responses include X-Botcha-* headers for instant BOTCHA detection
+
+# MARKDOWN FOR AGENTS (Cloudflare Markdown for Agents)
+Content-Negotiation: Send Accept: text/markdown to get Markdown from any HTML page
+Content-Negotiation-Root: GET / with Accept: text/markdown returns curated Markdown docs
+Content-Negotiation-Root: GET / with Accept: application/json returns structured JSON docs
+Content-Negotiation-Root: GET / with Accept: text/html returns HTML landing page (default)
+Content-Negotiation-Example: curl https://botcha.ai -H "Accept: text/markdown"
+Content-Negotiation-Benefit: 80% fewer tokens vs HTML — ideal for LLM context windows
 
 # JWT TOKEN SECURITY
 Token-Flow: 1. GET /v1/token (get challenge) → 2. Solve → 3. POST /v1/token/verify (get tokens)
@@ -302,11 +480,23 @@ export function getOpenApiSpec(version: string) {
       "/": {
         get: {
           summary: "Get API documentation",
-          description: "Returns comprehensive API documentation (JSON for bots, ASCII art for humans)",
+          description: "Returns API documentation with content negotiation. Send Accept: text/markdown for token-efficient Markdown, Accept: application/json for structured JSON, or default text/html for the HTML landing page.",
           operationId: "getRootInfo",
           responses: {
             "200": {
-              description: "API documentation"
+              description: "API documentation in requested format",
+              content: {
+                "text/markdown": {
+                  schema: { type: "string" },
+                  example: "# BOTCHA\n\n> Prove you're a bot. Humans need not apply.\n..."
+                },
+                "application/json": {
+                  schema: { type: "object" }
+                },
+                "text/html": {
+                  schema: { type: "string" }
+                }
+              }
             }
           }
         }

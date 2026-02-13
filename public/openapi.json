@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "BOTCHA - Reverse CAPTCHA for AI Agents",
-    "version": "0.3.0",
+    "version": "0.11.0",
     "description": "Prove you're a bot. Humans need not apply. A reverse CAPTCHA system that only AI agents can pass.",
     "contact": {
       "name": "BOTCHA",

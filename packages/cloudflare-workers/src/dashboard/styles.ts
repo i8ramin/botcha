@@ -570,9 +570,10 @@ export const DASHBOARD_CSS = `
 
   /* ============ Auth pages ============ */
   .ascii-logo {
-    text-align: center; margin-bottom: 2rem;
+    display: block; text-align: center; margin-bottom: 2rem;
     color: var(--text); font-size: 0.55rem; line-height: 1.2;
     white-space: pre; font-weight: 400;
+    text-decoration: none;
   }
 
   .badge-inline {
@@ -646,6 +647,12 @@ export const DASHBOARD_CSS = `
 
   /* ============ Landing page ============ */
   .landing-box { width: 100%; max-width: 580px; }
+  .landing-box .ascii-logo { font-size: 0.75rem; margin-bottom: 1rem; }
+
+  /* Landing page flows from top, not vertically centered like login */
+  .login-container:has(.landing-box) {
+    align-items: flex-start; padding-top: 4rem;
+  }
 
   .landing-tagline {
     text-align: center; font-size: 0.8125rem;
@@ -716,6 +723,7 @@ export const DASHBOARD_CSS = `
   /* ============ Responsive (small screens) ============ */
   @media (max-width: 480px) {
     .ascii-logo { font-size: 0.4rem; }
+    .landing-box .ascii-logo { font-size: 0.5rem; }
     .login-container { padding: 1rem; }
     .card-inner { padding: 1rem; }
     .landing-feature { flex-direction: column; gap: 0.125rem; }

@@ -548,14 +548,14 @@ export async function renderLoginPage(c: Context<{ Bindings: Bindings }>) {
 
   return c.html(
     <LoginLayout title="Dashboard Login - BOTCHA">
-      <div class="ascii-logo">{
+      <a href="/" class="ascii-logo">{
 `██████╗  ██████╗ ████████╗ ██████╗██╗  ██╗ █████╗
 ██╔══██╗██╔═══██╗╚══██╔══╝██╔════╝██║  ██║██╔══██╗
 ██████╔╝██║   ██║   ██║   ██║     ███████║███████║
 ██╔══██╗██║   ██║   ██║   ██║     ██╔══██║██╔══██║
 ██████╔╝╚██████╔╝   ██║   ╚██████╗██║  ██║██║  ██║
 ╚═════╝  ╚═════╝    ╚═╝    ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝`
-      }</div>
+      }</a>
       <p class="text-muted" style="text-align: center; font-size: 0.75rem; margin: -1rem 0 2rem;">
         {'>'}_&nbsp;prove you're a bot
       </p>

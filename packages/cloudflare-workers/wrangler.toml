@@ -11,6 +11,7 @@ routes = [
   { pattern = "botcha.ai/v1/*", zone_name = "botcha.ai" },
   { pattern = "botcha.ai/agent-only", zone_name = "botcha.ai" },
   { pattern = "botcha.ai/badge/*", zone_name = "botcha.ai" },
+  { pattern = "botcha.ai/gate", zone_name = "botcha.ai" },
   { pattern = "botcha.ai/health", zone_name = "botcha.ai" },
   { pattern = "botcha.ai/dashboard/*", zone_name = "botcha.ai" },
   { pattern = "botcha.ai/dashboard", zone_name = "botcha.ai" },
@@ -24,7 +25,7 @@ routes = [
 
 # Environment variables
 [vars]
-BOTCHA_VERSION = "0.10.0"
+BOTCHA_VERSION = "0.11.0"
 # JWT_SECRET is stored securely via: wrangler secret put JWT_SECRET
 
 # KV namespace for challenge storage
