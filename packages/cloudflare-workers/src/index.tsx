@@ -2025,23 +2025,12 @@ app.get('/go/:code', async (c) => {
     return c.redirect('/dashboard/code?error=invalid');
   }
 
-  // Generate session token (same logic as dashboard auth)
-  const encoder = new TextEncoder();
-  const secretKey = encoder.encode(c.env.JWT_SECRET);
-  const sessionToken = await new SignJWT({
-    type: 'botcha-verified',
-    solveTime: 0,
-    jti: crypto.randomUUID(),
-    app_id: data.app_id,
-  })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setSubject('dashboard-session')
-    .setIssuedAt()
-    .setExpirationTime('1h')
-    .sign(secretKey);
-
-  // Set session cookie
-  c.header('Set-Cookie', `botcha_session=${sessionToken}; Path=/dashboard; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
+  // Generate session token using existing helper
+  const { generateSessionToken, setSessionCookie } = await import('./dashboard/auth');
+  const sessionToken = await generateSessionToken(data.app_id, c.env.JWT_SECRET);
+  
+  // Set session cookie using consistent Hono helper
+  setSessionCookie(c, sessionToken);
   
   // Success! Redirect to dashboard
   return c.redirect('/dashboard');

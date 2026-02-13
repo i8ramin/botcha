@@ -48,7 +48,7 @@ type Variables = {
 /**
  * Generate a 1-hour dashboard session JWT for the given app_id.
  */
-async function generateSessionToken(appId: string, jwtSecret: string): Promise<string> {
+export async function generateSessionToken(appId: string, jwtSecret: string): Promise<string> {
   const encoder = new TextEncoder();
   const secretKey = encoder.encode(jwtSecret);
   return new SignJWT({
@@ -67,7 +67,7 @@ async function generateSessionToken(appId: string, jwtSecret: string): Promise<s
 /**
  * Set the dashboard session cookie on a response context.
  */
-function setSessionCookie(c: Context, token: string): void {
+export function setSessionCookie(c: Context, token: string): void {
   setCookie(c, 'botcha_session', token, {
     path: '/dashboard',
     httpOnly: true,
