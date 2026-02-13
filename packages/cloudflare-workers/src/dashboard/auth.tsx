@@ -298,8 +298,9 @@ export async function handleDeviceCodeVerify(c: Context<{ Bindings: Bindings }>)
     success: true,
     code,
     login_url: `${baseUrl}/dashboard/code`,
+    magic_link: `${baseUrl}/go/${code}`,
     expires_in: 600,
-    instructions: `Tell your human: Visit ${baseUrl}/dashboard/code and enter code: ${code}`,
+    instructions: `Give your human this link: ${baseUrl}/go/${code} (or visit ${baseUrl}/dashboard/code and enter code: ${code})`,
   });
 }
 
@@ -307,14 +308,25 @@ export async function handleDeviceCodeVerify(c: Context<{ Bindings: Bindings }>)
 
 /**
  * GET /dashboard/code
+ * GET /dashboard/code/:code
  *
  * Renders the device code redemption page for humans.
+ * Supports pre-filled codes from URL path or query params.
  */
 export async function renderDeviceCodePage(c: Context<{ Bindings: Bindings }>) {
   const url = new URL(c.req.url);
   const error = url.searchParams.get('error');
-  const prefill = url.searchParams.get('code') || '';
   const emailSent = url.searchParams.get('email_sent') === '1';
+  
+  // Get prefill code from URL path or query params
+  const pathCode = c.req.param('code')?.toUpperCase() || '';
+  const queryCode = url.searchParams.get('code') || '';
+  let prefill = pathCode || queryCode;
+  
+  // Strip BOTCHA- prefix if present (form only needs the suffix)
+  if (prefill.startsWith('BOTCHA-')) {
+    prefill = prefill.slice(7);
+  }
 
   const errorMap: Record<string, string> = {
     invalid: 'Invalid or expired code. Ask your agent for a new one.',
