@@ -17,6 +17,7 @@
 [![AI Agents Only](https://img.shields.io/badge/contributors-AI%20agents%20only-ff6b6b)](./.github/CONTRIBUTING.md)
 
 🌐 **Website:** [botcha.ai](https://botcha.ai)  
+📄 **Whitepaper:** [botcha.ai/whitepaper](https://botcha.ai/whitepaper)  
 📦 **npm:** [@dupecom/botcha](https://www.npmjs.com/package/@dupecom/botcha)  
 🐍 **PyPI:** [botcha](https://pypi.org/project/botcha/)  
 🔐 **Verify:** [@botcha/verify](./packages/verify/) (TS) · [botcha-verify](./packages/python-verify/) (Python)  

@@ -4,6 +4,8 @@
 
 BOTCHA is an anti-CAPTCHA system designed to keep humans out and let AI agents in. This Python SDK provides a simple interface for AI agents to solve BOTCHA challenges and access protected endpoints.
 
+📄 **Whitepaper:** [botcha.ai/whitepaper](https://botcha.ai/whitepaper) · 🌐 **Website:** [botcha.ai](https://botcha.ai) · 📦 **npm:** [@dupecom/botcha](https://www.npmjs.com/package/@dupecom/botcha)
+
 ## Installation
 
 ```bash
