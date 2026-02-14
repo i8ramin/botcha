@@ -5,6 +5,7 @@ import { Output } from '../lib/output.js';
 
 export interface TAPOptions {
   url: string;
+  appId?: string;
   json?: boolean;
   verbose?: boolean;
   quiet?: boolean;
@@ -30,6 +31,15 @@ export interface SessionOptions extends TAPOptions {
   userContext?: string;
 }
 
+/** Build an API URL with optional app_id query param */
+function buildUrl(baseUrl: string, path: string, appId?: string): string {
+  const url = new URL(path, baseUrl);
+  if (appId) {
+    url.searchParams.set('app_id', appId);
+  }
+  return url.toString();
+}
+
 /**
  * Register a TAP agent
  * POST /v1/agents/register/tap
@@ -53,7 +63,7 @@ export async function registerCommand(options: RegisterOptions): Promise<void> {
     output.debug('Registering TAP agent...');
 
     const baseUrl = new URL(options.url).origin;
-    const endpoint = `${baseUrl}/v1/agents/register/tap`;
+    const endpoint = buildUrl(baseUrl, '/v1/agents/register/tap', options.appId);
 
     // Build request body
     const body: any = {
@@ -79,7 +89,7 @@ export async function registerCommand(options: RegisterOptions): Promise<void> {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    const data: any = await response.json();
     const responseTime = Date.now() - startTime;
 
     if (!response.ok) {
@@ -163,7 +173,7 @@ export async function getCommand(options: GetOptions): Promise<void> {
     output.debug(`Getting TAP agent ${options.agentId}...`);
 
     const baseUrl = new URL(options.url).origin;
-    const endpoint = `${baseUrl}/v1/agents/${options.agentId}/tap`;
+    const endpoint = buildUrl(baseUrl, `/v1/agents/${encodeURIComponent(options.agentId)}/tap`);
 
     output.debug(`Endpoint: ${endpoint}`);
 
@@ -174,7 +184,7 @@ export async function getCommand(options: GetOptions): Promise<void> {
       },
     });
 
-    const data = await response.json();
+    const data: any = await response.json();
     const responseTime = Date.now() - startTime;
 
     if (!response.ok) {
@@ -285,7 +295,8 @@ export async function listCommand(options: ListOptions): Promise<void> {
     output.debug('Listing TAP agents...');
 
     const baseUrl = new URL(options.url).origin;
-    const url = new URL(`${baseUrl}/v1/agents/tap`);
+    const endpoint = buildUrl(baseUrl, '/v1/agents/tap', options.appId);
+    const url = new URL(endpoint);
     
     if (options.tapOnly) {
       url.searchParams.set('tap_only', 'true');
@@ -300,7 +311,7 @@ export async function listCommand(options: ListOptions): Promise<void> {
       },
     });
 
-    const data = await response.json();
+    const data: any = await response.json();
     const responseTime = Date.now() - startTime;
 
     if (!response.ok) {
@@ -411,7 +422,7 @@ export async function sessionCommand(options: SessionOptions): Promise<void> {
     output.debug('Creating TAP session...');
 
     const baseUrl = new URL(options.url).origin;
-    const endpoint = `${baseUrl}/v1/sessions/tap`;
+    const endpoint = buildUrl(baseUrl, '/v1/sessions/tap');
 
     // Parse intent JSON
     let intentObj;
@@ -444,7 +455,7 @@ export async function sessionCommand(options: SessionOptions): Promise<void> {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    const data: any = await response.json();
     const responseTime = Date.now() - startTime;
 
     if (!response.ok) {
