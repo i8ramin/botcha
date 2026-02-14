@@ -442,9 +442,17 @@ app.post('/gate', async (c) => {
 });
 
 // ============ OG IMAGE ============
+// Decode once at module level, reuse across requests
+let ogImageBuffer: Uint8Array | null = null;
 app.get('/og.png', (c) => {
-  const binary = Uint8Array.from(atob(OG_IMAGE_BASE64), (ch) => ch.charCodeAt(0));
-  return new Response(binary, {
+  if (!ogImageBuffer) {
+    const raw = atob(OG_IMAGE_BASE64);
+    ogImageBuffer = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) {
+      ogImageBuffer[i] = raw.charCodeAt(i);
+    }
+  }
+  return new Response(ogImageBuffer, {
     headers: {
       'Content-Type': 'image/png',
       'Cache-Control': 'public, max-age=604800', // 7 days
