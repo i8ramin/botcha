@@ -86,12 +86,16 @@ export function verificationEmail(code: string): SendEmailOptions & { to: '' } {
   <div style="background: #f5f5f5; border: 2px solid #333; padding: 1.5rem; text-align: center; font-size: 2rem; font-weight: bold; letter-spacing: 0.3em; margin: 1.5rem 0;">
     ${code}
   </div>
+  <div style="background: #f0faf0; border: 1px solid #1a8a2a; padding: 1rem; margin: 1.5rem 0;">
+    <p style="font-size: 0.9375rem; font-weight: bold; color: #1a6a1a; margin: 0 0 0.5rem;">&#8594; Go back to your AI agent and paste this code.</p>
+    <p style="font-size: 0.8125rem; color: #333; margin: 0;">Your agent asked for your email and is waiting for this code to finish setting up your account.</p>
+  </div>
   <p style="color: #666; font-size: 0.875rem;">This code expires in 10 minutes.</p>
   <p style="color: #666; font-size: 0.875rem;">If you didn't request this, ignore this email.</p>
   <hr style="border: none; border-top: 1px solid #ddd; margin: 2rem 0;">
   <p style="color: #999; font-size: 0.75rem;">BOTCHA — Prove you're a bot. Humans need not apply.</p>
 </div>`,
-    text: `BOTCHA: Your verification code is ${code}\n\nThis code expires in 10 minutes.\nIf you didn't request this, ignore this email.`,
+    text: `BOTCHA: Your verification code is ${code}\n\n--> Go back to your AI agent and paste this code.\nYour agent asked for your email and is waiting for this code to finish setting up your account.\n\nThis code expires in 10 minutes.\nIf you didn't request this, ignore this email.`,
   };
 }
 

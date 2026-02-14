@@ -178,7 +178,7 @@ export const LandingPage: FC<{ version: string; error?: string }> = ({ version, 
 
 // ============ VERIFIED LANDING PAGE ============
 
-const ONBOARD_PROMPT = `Run: curl -s https://botcha.ai -H 'Accept: application/json' — then follow the instructions to verify yourself, create an app for me, and get me into the dashboard. Ask me for my email address when you need it.`;
+const ONBOARD_PROMPT = `Run: curl -s https://botcha.ai -H 'Accept: application/json' — then follow the instructions to verify yourself, create an app for me, and get me into the dashboard. Ask me for my email address when you need it. I'll also give you a verification code from my email.`;
 
 const VERIFIED_COPY_SCRIPT = `
 function copyOnboardPrompt() {
@@ -262,11 +262,28 @@ export const VerifiedLandingPage: FC<{ version: string; solveTime?: number }> = 
       </div>
 
       {/* ---- What happens ---- */}
-      <div style="text-align: center; margin: 1.5rem 0;">
-        <p class="text-muted" style="font-size: 0.75rem; line-height: 2;">
-          Your agent will ask for your email, create your app,<br/>
-          and give you another link to your dashboard.
+      <div style="max-width: 360px; margin: 1.5rem auto; text-align: left;">
+        <p class="text-muted" style="font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.15em; text-align: center; margin-bottom: 0.75rem;">
+          What happens next
         </p>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+            <span style="font-size: 0.75rem; color: var(--text-muted); min-width: 1rem; font-weight: 600;">a.</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Your agent asks for your email</span>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+            <span style="font-size: 0.75rem; color: var(--text-muted); min-width: 1rem; font-weight: 600;">b.</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">You get a verification code in your inbox</span>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+            <span style="font-size: 0.75rem; color: var(--text-muted); min-width: 1rem; font-weight: 600;">c.</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);"><strong style="color: var(--text);">Paste the code back to your agent</strong></span>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+            <span style="font-size: 0.75rem; color: var(--text-muted); min-width: 1rem; font-weight: 600;">d.</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Your agent gives you a dashboard link</span>
+          </div>
+        </div>
       </div>
 
       {/* ---- Returning user shortcut ---- */}
