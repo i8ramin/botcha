@@ -1,10 +1,14 @@
 /**
  * TAP command - Trusted Agent Protocol commands
+ * Config-aware: reads ~/.botcha/config.json for defaults
  */
 import { Output } from '../lib/output.js';
+import { loadConfig, saveConfig, resolve } from '../lib/config.js';
+
+// ============ OPTION INTERFACES ============
 
 export interface TAPOptions {
-  url: string;
+  url?: string;
   appId?: string;
   json?: boolean;
   verbose?: boolean;
@@ -15,10 +19,11 @@ export interface RegisterOptions extends TAPOptions {
   name: string;
   operator?: string;
   trustLevel?: string;
+  capabilities?: string; // comma-separated: "browse,search,purchase"
 }
 
 export interface GetOptions extends TAPOptions {
-  agentId: string;
+  agentId?: string; // optional — falls back to config.agent_id
 }
 
 export interface ListOptions extends TAPOptions {
@@ -26,12 +31,22 @@ export interface ListOptions extends TAPOptions {
 }
 
 export interface SessionOptions extends TAPOptions {
-  agentId: string;
-  intent: string;
+  agentId?: string;
+  // Friendly flags (alternative to --intent JSON)
+  action?: string;
+  resource?: string;
+  duration?: string;
+  // Raw JSON fallback
+  intent?: string;
   userContext?: string;
 }
 
-/** Build an API URL with optional app_id query param */
+export interface StatusOptions extends TAPOptions {
+  sessionId?: string;
+}
+
+// ============ HELPERS ============
+
 function buildUrl(baseUrl: string, path: string, appId?: string): string {
   const url = new URL(path, baseUrl);
   if (appId) {
@@ -40,52 +55,86 @@ function buildUrl(baseUrl: string, path: string, appId?: string): string {
   return url.toString();
 }
 
-/**
- * Register a TAP agent
- * POST /v1/agents/register/tap
- */
+/** Parse --duration "1h" / "30m" / "3600" into seconds */
+function parseDuration(input: string): number {
+  const match = input.match(/^(\d+)\s*(h|hr|hrs|hours?|m|min|mins|minutes?|s|sec|secs|seconds?)?$/i);
+  if (!match) return parseInt(input, 10) || 3600;
+  const num = parseInt(match[1], 10);
+  const unit = (match[2] || 's').toLowerCase();
+  if (unit.startsWith('h')) return num * 3600;
+  if (unit.startsWith('m')) return num * 60;
+  return num;
+}
+
+/** Resolve url/appId/agentId from flags + config, exit if missing */
+function resolveConfig(options: TAPOptions, output: Output, need: { url?: boolean; appId?: boolean; agentId?: boolean } = {}) {
+  const config = loadConfig();
+  const url = resolve(options.url, config.url);
+  const appId = resolve(options.appId, config.app_id);
+  const agentId = resolve((options as any).agentId, config.agent_id);
+
+  if (need.url && !url) {
+    output.error('No URL. Pass --url or run: botcha init --email you@example.com');
+    process.exit(1);
+  }
+  if (need.appId && !appId) {
+    output.error('No app_id. Pass --app-id or run: botcha init --email you@example.com');
+    process.exit(1);
+  }
+  if (need.agentId && !agentId) {
+    output.error('No agent_id. Pass --agent-id or register one: botcha tap register --name "my-agent"');
+    process.exit(1);
+  }
+  return { url: url!, appId, agentId, config };
+}
+
+function handleError(output: Output, options: TAPOptions, label: string, error: unknown): never {
+  if (options.json) {
+    output.json({ success: false, error: error instanceof Error ? error.message : String(error) });
+  } else {
+    output.error(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  process.exit(1);
+}
+
+// ============ REGISTER ============
+
 export async function registerCommand(options: RegisterOptions): Promise<void> {
   const output = new Output(options);
   const startTime = Date.now();
 
   try {
-    // Validate required fields
-    if (!options.url) {
-      output.error('--url is required');
-      process.exit(1);
-    }
-
     if (!options.name) {
       output.error('--name is required');
       process.exit(1);
     }
 
+    const { url, appId, config } = resolveConfig(options, output, { url: true, appId: true });
+
     output.debug('Registering TAP agent...');
 
-    const baseUrl = new URL(options.url).origin;
-    const endpoint = buildUrl(baseUrl, '/v1/agents/register/tap', options.appId);
+    const baseUrl = new URL(url).origin;
+    const endpoint = buildUrl(baseUrl, '/v1/agents/register/tap', appId);
 
     // Build request body
-    const body: any = {
-      name: options.name,
-    };
+    const body: any = { name: options.name };
+    if (options.operator) body.operator = options.operator;
+    if (options.trustLevel) body.trust_level = options.trustLevel;
 
-    if (options.operator) {
-      body.operator = options.operator;
-    }
-
-    if (options.trustLevel) {
-      body.trust_level = options.trustLevel;
+    // Parse --capabilities "browse,search,purchase" into proper format
+    if (options.capabilities) {
+      body.capabilities = options.capabilities.split(',').map((action: string) => ({
+        action: action.trim(),
+        scope: ['*'],
+      }));
     }
 
     output.debug(`Endpoint: ${endpoint}`);
-    output.debug(`Request body: ${JSON.stringify(body, null, 2)}`);
+    output.debug(`Body: ${JSON.stringify(body, null, 2)}`);
 
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
@@ -94,364 +143,183 @@ export async function registerCommand(options: RegisterOptions): Promise<void> {
 
     if (!response.ok) {
       if (options.json) {
-        output.json({
-          success: false,
-          error: data.error || 'REGISTRATION_FAILED',
-          message: data.message || response.statusText,
-          status: response.status,
-        });
+        output.json({ success: false, error: data.error, message: data.message, status: response.status });
       } else {
         output.error(`Registration failed: ${data.message || response.statusText}`);
-        output.section('Status', response.status.toString());
-        output.section('Error', data.error || 'UNKNOWN');
       }
       process.exit(1);
     }
 
+    // Save as default agent
+    config.agent_id = data.agent_id;
+    saveConfig(config);
+
     if (options.json) {
-      output.json({
-        success: true,
-        ...data,
-        responseTimeMs: responseTime,
-      });
+      output.json({ success: true, ...data, responseTimeMs: responseTime });
     } else {
       output.success(`Agent registered in ${responseTime}ms!`);
       output.section('Agent ID', data.agent_id);
       output.section('Name', data.name);
-      output.section('App ID', data.app_id);
-      
-      if (data.operator) {
-        output.section('Operator', data.operator);
+      if (data.operator) output.section('Operator', data.operator);
+      if (data.trust_level) output.section('Trust Level', data.trust_level);
+      if (data.capabilities?.length) {
+        output.section('Capabilities', data.capabilities.map((c: any) => c.action).join(', '));
       }
-      
-      if (data.trust_level) {
-        output.section('Trust Level', data.trust_level);
-      }
-      
-      if (data.tap_enabled) {
-        output.section('TAP Enabled', 'true');
-      }
-      
-      if (options.verbose) {
-        console.log('\nFull Response:');
-        console.log(JSON.stringify(data, null, 2));
-      }
+      console.log();
+      output.info('Saved as default agent. Next:');
+      console.log('  botcha tap session --action browse --resource products');
     }
-
   } catch (error) {
-    if (options.json) {
-      output.json({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    } else {
-      output.error(`Registration failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    process.exit(1);
+    handleError(output, options, 'Registration failed', error);
   }
 }
 
-/**
- * Get TAP agent details
- * GET /v1/agents/:id/tap
- */
+// ============ GET ============
+
 export async function getCommand(options: GetOptions): Promise<void> {
   const output = new Output(options);
   const startTime = Date.now();
 
   try {
-    if (!options.url) {
-      output.error('--url is required');
-      process.exit(1);
-    }
+    const { url, agentId } = resolveConfig(options, output, { url: true, agentId: true });
 
-    if (!options.agentId) {
-      output.error('--agent-id is required');
-      process.exit(1);
-    }
+    output.debug(`Getting TAP agent ${agentId}...`);
 
-    output.debug(`Getting TAP agent ${options.agentId}...`);
+    const baseUrl = new URL(url).origin;
+    const endpoint = buildUrl(baseUrl, `/v1/agents/${encodeURIComponent(agentId!)}/tap`);
 
-    const baseUrl = new URL(options.url).origin;
-    const endpoint = buildUrl(baseUrl, `/v1/agents/${encodeURIComponent(options.agentId)}/tap`);
-
-    output.debug(`Endpoint: ${endpoint}`);
-
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
+    const response = await fetch(endpoint, { headers: { 'Accept': 'application/json' } });
     const data: any = await response.json();
     const responseTime = Date.now() - startTime;
 
     if (!response.ok) {
       if (options.json) {
-        output.json({
-          success: false,
-          error: data.error || 'GET_FAILED',
-          message: data.message || response.statusText,
-          status: response.status,
-        });
+        output.json({ success: false, error: data.error, message: data.message, status: response.status });
       } else {
-        output.error(`Get failed: ${data.message || response.statusText}`);
-        output.section('Status', response.status.toString());
-        output.section('Error', data.error || 'UNKNOWN');
+        output.error(`Agent not found: ${data.message || response.statusText}`);
       }
       process.exit(1);
     }
 
     if (options.json) {
-      output.json({
-        success: true,
-        ...data,
-        responseTimeMs: responseTime,
-      });
+      output.json({ success: true, ...data, responseTimeMs: responseTime });
     } else {
       output.success(`Agent retrieved in ${responseTime}ms!`);
       output.section('Agent ID', data.agent_id);
       output.section('Name', data.name);
       output.section('App ID', data.app_id);
-      
-      if (data.operator) {
-        output.section('Operator', data.operator);
+      if (data.operator) output.section('Operator', data.operator);
+      if (data.version) output.section('Version', data.version);
+      if (data.trust_level) output.section('Trust Level', data.trust_level);
+      output.section('TAP Enabled', data.tap_enabled ? 'yes' : 'no');
+      if (data.created_at) output.section('Created', data.created_at);
+      if (data.capabilities?.length) {
+        output.section('Capabilities', data.capabilities.map((c: any) => c.action).join(', '));
       }
-      
-      if (data.version) {
-        output.section('Version', data.version);
-      }
-      
-      if (data.trust_level) {
-        output.section('Trust Level', data.trust_level);
-      }
-      
-      if (data.tap_enabled !== undefined) {
-        output.section('TAP Enabled', data.tap_enabled ? 'true' : 'false');
-      }
-      
-      if (data.signature_algorithm) {
-        output.section('Signature Algorithm', data.signature_algorithm);
-      }
-      
-      if (data.has_public_key) {
-        output.section('Has Public Key', 'true');
-        if (data.key_fingerprint) {
-          output.section('Key Fingerprint', data.key_fingerprint);
-        }
-      }
-      
-      if (data.created_at) {
-        output.section('Created At', data.created_at);
-      }
-      
-      if (data.capabilities && Array.isArray(data.capabilities)) {
-        output.section('Capabilities', data.capabilities.length.toString());
-        if (options.verbose && data.capabilities.length > 0) {
-          console.log('\nCapabilities:');
-          data.capabilities.forEach((cap: any, idx: number) => {
-            console.log(`  ${idx + 1}. ${cap.action}${cap.resource ? ` on ${cap.resource}` : ''}`);
-            if (cap.constraints) {
-              console.log(`     Constraints: ${JSON.stringify(cap.constraints)}`);
-            }
-          });
-        }
-      }
-      
       if (options.verbose) {
-        console.log('\nFull Response:');
-        console.log(JSON.stringify(data, null, 2));
+        console.log('\n' + JSON.stringify(data, null, 2));
       }
     }
-
   } catch (error) {
-    if (options.json) {
-      output.json({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    } else {
-      output.error(`Get failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    process.exit(1);
+    handleError(output, options, 'Get failed', error);
   }
 }
 
-/**
- * List TAP agents
- * GET /v1/agents/tap
- */
+// ============ LIST ============
+
 export async function listCommand(options: ListOptions): Promise<void> {
   const output = new Output(options);
   const startTime = Date.now();
 
   try {
-    if (!options.url) {
-      output.error('--url is required');
-      process.exit(1);
-    }
+    const { url, appId } = resolveConfig(options, output, { url: true, appId: true });
 
     output.debug('Listing TAP agents...');
 
-    const baseUrl = new URL(options.url).origin;
-    const endpoint = buildUrl(baseUrl, '/v1/agents/tap', options.appId);
-    const url = new URL(endpoint);
-    
-    if (options.tapOnly) {
-      url.searchParams.set('tap_only', 'true');
-    }
+    const baseUrl = new URL(url).origin;
+    const endpoint = buildUrl(baseUrl, '/v1/agents/tap', appId);
+    const fullUrl = new URL(endpoint);
+    if (options.tapOnly) fullUrl.searchParams.set('tap_only', 'true');
 
-    output.debug(`Endpoint: ${url.toString()}`);
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
+    const response = await fetch(fullUrl.toString(), { headers: { 'Accept': 'application/json' } });
     const data: any = await response.json();
     const responseTime = Date.now() - startTime;
 
     if (!response.ok) {
       if (options.json) {
-        output.json({
-          success: false,
-          error: data.error || 'LIST_FAILED',
-          message: data.message || response.statusText,
-          status: response.status,
-        });
+        output.json({ success: false, error: data.error, message: data.message, status: response.status });
       } else {
         output.error(`List failed: ${data.message || response.statusText}`);
-        output.section('Status', response.status.toString());
-        output.section('Error', data.error || 'UNKNOWN');
       }
       process.exit(1);
     }
 
     if (options.json) {
-      output.json({
-        success: true,
-        ...data,
-        responseTimeMs: responseTime,
-      });
+      output.json({ success: true, ...data, responseTimeMs: responseTime });
     } else {
-      output.success(`Agents retrieved in ${responseTime}ms!`);
-      output.section('Total Count', data.count?.toString() || '0');
-      
-      if (data.tap_enabled_count !== undefined) {
-        output.section('TAP Enabled', data.tap_enabled_count.toString());
-      }
-      
-      if (data.agents && Array.isArray(data.agents) && data.agents.length > 0) {
-        console.log('\nAgents:\n');
-        
-        // Display as table
-        const headers = ['Agent ID', 'Name', 'Operator', 'Trust Level', 'TAP'];
-        const rows = data.agents.map((agent: any) => [
-          agent.agent_id,
-          agent.name || '-',
-          agent.operator || '-',
-          agent.trust_level || '-',
-          agent.tap_enabled ? '✓' : '✗',
+      output.success(`${data.count || 0} agent(s) found (${responseTime}ms)`);
+      if (data.agents?.length > 0) {
+        console.log();
+        const headers = ['Agent ID', 'Name', 'Capabilities', 'Trust', 'TAP'];
+        const rows = data.agents.map((a: any) => [
+          a.agent_id,
+          a.name || '-',
+          a.capabilities?.map((c: any) => c.action).join(',') || '-',
+          a.trust_level || '-',
+          a.tap_enabled ? 'yes' : 'no',
         ]);
-        
         output.table(headers, rows);
-        
-        if (options.verbose) {
-          console.log('\nDetailed Information:');
-          data.agents.forEach((agent: any, idx: number) => {
-            console.log(`\n${idx + 1}. ${agent.name} (${agent.agent_id})`);
-            if (agent.version) {
-              console.log(`   Version: ${agent.version}`);
-            }
-            if (agent.created_at) {
-              console.log(`   Created: ${agent.created_at}`);
-            }
-            if (agent.capabilities && Array.isArray(agent.capabilities)) {
-              console.log(`   Capabilities: ${agent.capabilities.length}`);
-            }
-            if (agent.last_verified_at) {
-              console.log(`   Last Verified: ${agent.last_verified_at}`);
-            }
-          });
-        }
       } else {
-        console.log('\nNo agents found.');
+        console.log('\n  No agents yet. Create one:');
+        console.log('  botcha tap register --name "my-agent" --capabilities browse,search');
       }
     }
-
   } catch (error) {
-    if (options.json) {
-      output.json({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    } else {
-      output.error(`List failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    process.exit(1);
+    handleError(output, options, 'List failed', error);
   }
 }
 
-/**
- * Create TAP session
- * POST /v1/sessions/tap
- */
+// ============ SESSION ============
+
 export async function sessionCommand(options: SessionOptions): Promise<void> {
   const output = new Output(options);
   const startTime = Date.now();
 
   try {
-    if (!options.url) {
-      output.error('--url is required');
-      process.exit(1);
-    }
+    const { url, agentId } = resolveConfig(options, output, { url: true, agentId: true });
 
-    if (!options.agentId) {
-      output.error('--agent-id is required');
-      process.exit(1);
-    }
-
-    if (!options.intent) {
-      output.error('--intent is required');
+    // Build intent from friendly flags OR raw JSON
+    let intentObj: any;
+    if (options.intent) {
+      try {
+        intentObj = JSON.parse(options.intent);
+      } catch {
+        output.error('--intent must be valid JSON. Or use: --action browse --resource products --duration 1h');
+        process.exit(1);
+      }
+    } else if (options.action) {
+      intentObj = { action: options.action };
+      if (options.resource) intentObj.resource = options.resource;
+      if (options.duration) intentObj.duration = parseDuration(options.duration);
+    } else {
+      output.error('Specify intent. Either:\n  --action browse --resource products --duration 1h\n  --intent \'{"action":"browse","resource":"products"}\'');
       process.exit(1);
     }
 
     output.debug('Creating TAP session...');
 
-    const baseUrl = new URL(options.url).origin;
+    const baseUrl = new URL(url).origin;
     const endpoint = buildUrl(baseUrl, '/v1/sessions/tap');
 
-    // Parse intent JSON
-    let intentObj;
-    try {
-      intentObj = JSON.parse(options.intent);
-    } catch {
-      output.error('--intent must be valid JSON');
-      if (!options.json) {
-        console.log('\nExample:');
-        console.log('  --intent \'{"action":"read","resource":"documents"}\'');
-      }
-      process.exit(1);
-    }
-
-    // Build request body
-    const body: any = {
-      agent_id: options.agentId,
+    const body = {
+      agent_id: agentId,
       intent: intentObj,
       user_context: options.userContext || crypto.randomUUID(),
     };
 
-    output.debug(`Endpoint: ${endpoint}`);
-    output.debug(`Request body: ${JSON.stringify(body, null, 2)}`);
-
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
@@ -460,73 +328,154 @@ export async function sessionCommand(options: SessionOptions): Promise<void> {
 
     if (!response.ok) {
       if (options.json) {
-        output.json({
-          success: false,
-          error: data.error || 'SESSION_FAILED',
-          message: data.message || response.statusText,
-          status: response.status,
-        });
+        output.json({ success: false, error: data.error, message: data.message, status: response.status });
       } else {
-        output.error(`Session creation failed: ${data.message || response.statusText}`);
-        output.section('Status', response.status.toString());
-        output.section('Error', data.error || 'UNKNOWN');
-        
+        output.error(`Session failed: ${data.message || response.statusText}`);
         if (data.error === 'INSUFFICIENT_CAPABILITY') {
-          console.log('\nThe agent does not have the required capability for this action.');
-          console.log('Register the agent with appropriate capabilities first.');
+          console.log('\n  Agent lacks this capability. Re-register with:');
+          console.log(`  botcha tap register --name "my-agent" --capabilities ${intentObj.action || 'browse'}`);
         }
       }
       process.exit(1);
     }
 
     if (options.json) {
-      output.json({
-        success: true,
-        ...data,
-        responseTimeMs: responseTime,
-      });
+      output.json({ success: true, ...data, responseTimeMs: responseTime });
     } else {
       output.success(`Session created in ${responseTime}ms!`);
       output.section('Session ID', data.session_id);
-      output.section('Agent ID', data.agent_id);
-      
-      if (data.expires_at) {
-        output.section('Expires At', data.expires_at);
-      }
-      
-      if (data.capabilities && Array.isArray(data.capabilities)) {
-        output.section('Capabilities', data.capabilities.length.toString());
-      }
-      
+      output.section('Agent', data.agent_id);
+      output.section('Expires', data.expires_at);
       if (data.intent) {
-        output.section('Intent Action', data.intent.action);
-        if (data.intent.resource) {
-          output.section('Intent Resource', data.intent.resource);
-        }
+        const parts = [data.intent.action, data.intent.resource].filter(Boolean);
+        output.section('Intent', parts.join(' on '));
       }
-      
-      if (options.verbose) {
-        console.log('\nFull Response:');
-        console.log(JSON.stringify(data, null, 2));
+      if (data.capabilities?.length) {
+        output.section('Capabilities', data.capabilities.map((c: any) => c.action).join(', '));
       }
+      console.log();
+      output.info('Check session:');
+      console.log(`  botcha tap status --session-id ${data.session_id}`);
     }
-
   } catch (error) {
-    if (options.json) {
-      output.json({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    } else {
-      output.error(`Session creation failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    process.exit(1);
+    handleError(output, options, 'Session failed', error);
   }
 }
+
+// ============ STATUS ============
+
+export async function statusCommand(options: StatusOptions): Promise<void> {
+  const output = new Output(options);
+  const startTime = Date.now();
+
+  try {
+    const { url, agentId, appId } = resolveConfig(options, output, { url: true });
+    const baseUrl = new URL(url).origin;
+
+    // If session ID given, show that session
+    if (options.sessionId) {
+      const endpoint = buildUrl(baseUrl, `/v1/sessions/${encodeURIComponent(options.sessionId)}/tap`);
+      const response = await fetch(endpoint, { headers: { 'Accept': 'application/json' } });
+      const data: any = await response.json();
+      const responseTime = Date.now() - startTime;
+
+      if (!response.ok) {
+        if (options.json) {
+          output.json({ success: false, error: data.error, message: data.message });
+        } else {
+          output.error(`Session not found: ${data.message || response.statusText}`);
+        }
+        process.exit(1);
+      }
+
+      if (options.json) {
+        output.json({ success: true, ...data, responseTimeMs: responseTime });
+        return;
+      }
+
+      output.header('\nSession Status\n');
+      output.section('Session ID', data.session_id);
+      output.section('Agent', data.agent_id);
+      if (data.intent) {
+        const parts = [data.intent.action, data.intent.resource].filter(Boolean);
+        output.section('Intent', parts.join(' on '));
+      }
+      output.section('Created', data.created_at);
+      output.section('Expires', data.expires_at);
+      if (data.time_remaining != null) {
+        const mins = Math.floor(data.time_remaining / 60000);
+        const secs = Math.floor((data.time_remaining % 60000) / 1000);
+        output.section('Time Left', `${mins}m ${secs}s`);
+      }
+      return;
+    }
+
+    // Otherwise, show overview: agent info + agent list
+    if (options.json) {
+      const result: any = { success: true };
+      if (agentId) {
+        const agentRes = await fetch(buildUrl(baseUrl, `/v1/agents/${encodeURIComponent(agentId)}/tap`), { headers: { 'Accept': 'application/json' } });
+        if (agentRes.ok) result.agent = await agentRes.json();
+      }
+      if (appId) {
+        const listRes = await fetch(buildUrl(baseUrl, '/v1/agents/tap', appId), { headers: { 'Accept': 'application/json' } });
+        if (listRes.ok) result.agents = await listRes.json();
+      }
+      output.json(result);
+      return;
+    }
+
+    output.header('\nBOTCHA Status\n');
+    output.section('URL', url);
+    if (appId) output.section('App ID', appId);
+
+    // Show default agent
+    if (agentId) {
+      output.section('Default Agent', agentId);
+      try {
+        const agentRes = await fetch(buildUrl(baseUrl, `/v1/agents/${encodeURIComponent(agentId)}/tap`), { headers: { 'Accept': 'application/json' } });
+        if (agentRes.ok) {
+          const agent: any = await agentRes.json();
+          output.section('  Name', agent.name);
+          if (agent.capabilities?.length) {
+            output.section('  Capabilities', agent.capabilities.map((c: any) => c.action).join(', '));
+          }
+          output.section('  Trust Level', agent.trust_level || 'basic');
+        }
+      } catch {
+        // Non-fatal
+      }
+    } else {
+      output.warn('No default agent. Register one:');
+      console.log('  botcha tap register --name "my-agent" --capabilities browse,search');
+    }
+
+    // Show agent count
+    if (appId) {
+      try {
+        const listRes = await fetch(buildUrl(baseUrl, '/v1/agents/tap', appId), { headers: { 'Accept': 'application/json' } });
+        if (listRes.ok) {
+          const list: any = await listRes.json();
+          console.log();
+          output.section('Total Agents', (list.count || 0).toString());
+          output.section('TAP Enabled', (list.tap_enabled_count || 0).toString());
+        }
+      } catch {
+        // Non-fatal
+      }
+    }
+    console.log();
+  } catch (error) {
+    handleError(output, options, 'Status failed', error);
+  }
+}
+
+// ============ EXPORT ============
 
 export default {
   register: registerCommand,
   get: getCommand,
   list: listCommand,
   session: sessionCommand,
+  status: statusCommand,
 };
