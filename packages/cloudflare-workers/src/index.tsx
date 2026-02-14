@@ -1780,6 +1780,19 @@ app.post('/v1/apps/:id/rotate-secret', async (c) => {
   });
 });
 
+// ============ TAP (TRUSTED AGENT PROTOCOL) ENDPOINTS ============
+// NOTE: TAP routes MUST come before generic /v1/agents/:id to prevent
+// Hono from matching "tap" as an :id parameter.
+
+// TAP agent registration and retrieval
+app.post('/v1/agents/register/tap', registerTAPAgentRoute);
+app.get('/v1/agents/tap', listTAPAgentsRoute);
+app.get('/v1/agents/:id/tap', getTAPAgentRoute);
+
+// TAP session management
+app.post('/v1/sessions/tap', createTAPSessionRoute);
+app.get('/v1/sessions/:id/tap', getTAPSessionRoute);
+
 // ============ AGENT REGISTRY API ============
 
 // Register a new agent
@@ -1962,17 +1975,6 @@ app.get('/v1/agents', async (c) => {
     }, 500);
   }
 });
-
-// ============ TAP (TRUSTED AGENT PROTOCOL) ENDPOINTS ============
-
-// TAP agent registration and retrieval
-app.post('/v1/agents/register/tap', registerTAPAgentRoute);
-app.get('/v1/agents/tap', listTAPAgentsRoute);
-app.get('/v1/agents/:id/tap', getTAPAgentRoute);
-
-// TAP session management
-app.post('/v1/sessions/tap', createTAPSessionRoute);
-app.get('/v1/sessions/:id/tap', getTAPSessionRoute);
 
 // ============ DASHBOARD AUTH API ENDPOINTS ============
 
