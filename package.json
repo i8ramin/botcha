@@ -16,10 +16,15 @@
     "./client": {
       "import": "./dist/lib/client/index.js",
       "types": "./dist/lib/client/index.d.ts"
+    },
+    "./middleware": {
+      "import": "./dist/src/middleware/tap-enhanced-verify.js",
+      "types": "./dist/src/middleware/tap-enhanced-verify.d.ts"
     }
   },
   "files": [
     "dist/lib",
+    "dist/src",
     "README.md",
     "LICENSE"
   ],

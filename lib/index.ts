@@ -163,3 +163,6 @@ export function solve(problems: number[]): string[] {
 // ============ EXPORTS ============
 export const botcha = { verify, solve };
 export default botcha;
+
+// TAP Enhanced Middleware available via:
+// import { tapEnhancedVerify, createTAPVerifyMiddleware, tapVerifyModes } from '@dupecom/botcha/middleware'

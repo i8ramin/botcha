@@ -29,7 +29,7 @@ import {
 
 // ============ EXTENDED OPTIONS ============
 
-interface TAPBotchaOptions {
+export interface TAPBotchaOptions {
   // Existing BOTCHA options
   requireSignature?: boolean;
   allowChallenge?: boolean;
@@ -493,5 +493,11 @@ export const tapVerifyModes = {
     ...options
   })
 };
+
+/**
+ * Alias for tapEnhancedVerify for backward compatibility with docs.
+ * Docs reference: import { createTAPVerifyMiddleware } from '@dupecom/botcha/middleware'
+ */
+export const createTAPVerifyMiddleware = tapEnhancedVerify;
 
 export default tapEnhancedVerify;
