@@ -103,6 +103,13 @@ export const DashboardLayout: FC<PropsWithChildren<{ title?: string; appId?: str
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title || 'BOTCHA Dashboard'}</title>
+        <meta property="og:title" content="BOTCHA — The Identity Layer for AI Agents" />
+        <meta property="og:description" content="Reverse CAPTCHA — Prove you're a bot. Humans need not apply." />
+        <meta property="og:image" content="https://botcha.ai/og.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content="https://botcha.ai/og.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
@@ -145,6 +152,13 @@ export const LoginLayout: FC<PropsWithChildren<{ title?: string; version?: strin
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title || 'BOTCHA Login'}</title>
+        <meta property="og:title" content="BOTCHA — The Identity Layer for AI Agents" />
+        <meta property="og:description" content="Reverse CAPTCHA — Prove you're a bot. Humans need not apply." />
+        <meta property="og:image" content="https://botcha.ai/og.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content="https://botcha.ai/og.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
@@ -187,10 +201,19 @@ export const LandingLayout: FC<PropsWithChildren<{ version: string }>> = ({ chil
         <meta name="botcha-challenge" content="embedded" data-selector="script[type='application/botcha+json']" />
 
         {/* Open Graph */}
-        <meta property="og:title" content="BOTCHA — Reverse CAPTCHA for AI Agents" />
-        <meta property="og:description" content="Hosted bot verification service. Prove you're a bot. Humans need not apply." />
+        <meta property="og:title" content="BOTCHA — The Identity Layer for AI Agents" />
+        <meta property="og:description" content="Reverse CAPTCHA — Prove you're a bot. Humans need not apply. One of the first services to support the Trusted Agent Protocol (TAP)." />
         <meta property="og:url" content="https://botcha.ai" />
         <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://botcha.ai/og.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:type" content="image/png" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="BOTCHA — The Identity Layer for AI Agents" />
+        <meta name="twitter:description" content="Reverse CAPTCHA — Prove you're a bot. Humans need not apply." />
+        <meta name="twitter:image" content="https://botcha.ai/og.png" />
 
         {/* Schema.org */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({

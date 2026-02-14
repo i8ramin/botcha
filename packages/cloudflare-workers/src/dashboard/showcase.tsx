@@ -1084,10 +1084,19 @@ export const ShowcasePage: FC<{ version: string; error?: string }> = ({ version,
         <meta name="ai-agent-welcome" content="true" />
 
         {/* Open Graph */}
-        <meta property="og:title" content="BOTCHA — Trusted Agent Protocol (TAP) for AI Agents" />
-        <meta property="og:description" content="One of the first services to support TAP. Zero-trust identity for AI agents." />
+        <meta property="og:title" content="BOTCHA — The Identity Layer for AI Agents" />
+        <meta property="og:description" content="Reverse CAPTCHA — Prove you're a bot. Humans need not apply. One of the first services to support the Trusted Agent Protocol (TAP)." />
         <meta property="og:url" content="https://botcha.ai" />
         <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://botcha.ai/og.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:type" content="image/png" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="BOTCHA — The Identity Layer for AI Agents" />
+        <meta name="twitter:description" content="Reverse CAPTCHA — Prove you're a bot. Humans need not apply." />
+        <meta name="twitter:image" content="https://botcha.ai/og.png" />
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

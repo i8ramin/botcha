@@ -36,6 +36,7 @@ import {
   handleDeviceCodeVerify,
 } from './dashboard/auth';
 import { ROBOTS_TXT, AI_TXT, AI_PLUGIN_JSON, SITEMAP_XML, getOpenApiSpec, getBotchaMarkdown, getWhitepaperMarkdown } from './static';
+import { OG_IMAGE_BASE64 } from './og-image';
 import { createApp, getApp, getAppByEmail, verifyEmailCode, rotateAppSecret, regenerateVerificationCode } from './apps';
 import { sendEmail, verificationEmail, recoveryEmail, secretRotatedEmail } from './email';
 import { LandingPage, VerifiedLandingPage } from './dashboard/landing';
@@ -438,6 +439,17 @@ app.post('/gate', async (c) => {
 
   // Redirect to /go/:code which handles both gate codes and device codes
   return c.redirect(`/go/${code}`);
+});
+
+// ============ OG IMAGE ============
+app.get('/og.png', (c) => {
+  const binary = Uint8Array.from(atob(OG_IMAGE_BASE64), (ch) => ch.charCodeAt(0));
+  return new Response(binary, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=604800', // 7 days
+    },
+  });
 });
 
 // ============ SHOWCASE PAGE (legacy URL, redirect to home) ============
