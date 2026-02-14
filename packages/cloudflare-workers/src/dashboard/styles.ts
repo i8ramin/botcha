@@ -704,6 +704,48 @@ export const DASHBOARD_CSS = `
     margin-top: 0.125rem;
   }
 
+  /* ============ Announcement Banner ============ */
+  .announcement-banner {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    margin: 0 0 2rem;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--green);
+    background: #f5fff7;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .announcement-banner:hover {
+    background: #eaffed;
+    border-color: #148a22;
+    opacity: 1;
+  }
+  .announcement-banner-label {
+    display: inline-block;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    background: var(--green);
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  .announcement-banner-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .announcement-banner-cta {
+    display: block;
+    font-size: 0.625rem;
+    color: var(--green);
+    margin-top: 0.25rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
   .landing-footer {
     text-align: center; padding: 2rem 0 3rem;
     font-size: 0.6875rem; color: var(--text-dim);
@@ -713,6 +755,63 @@ export const DASHBOARD_CSS = `
   }
   .landing-footer a:hover { color: var(--text); }
   .landing-footer-sep { margin: 0 0.375rem; }
+
+  /* ============ Global Footer ============ */
+  .global-footer {
+    text-align: center;
+    padding: 3rem 2rem 4rem;
+  }
+
+  .global-footer-inner {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .global-footer-dashboard {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: var(--font);
+    color: var(--text);
+    text-decoration: none;
+    padding: 0.5rem 1.25rem;
+    border: 1px solid var(--border-bright);
+    margin-bottom: 1.25rem;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .global-footer-dashboard:hover {
+    border-color: var(--accent);
+    background: var(--bg-raised);
+    opacity: 1;
+  }
+
+  .global-footer-links {
+    font-size: 0.6875rem;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+  }
+
+  .global-footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  .global-footer-links a:hover { color: var(--text); }
+
+  .global-footer-legal {
+    font-size: 0.625rem;
+    color: var(--text-dim);
+  }
+
+  .global-footer-legal a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  .global-footer-legal a:hover { color: var(--text); }
+
+  .global-footer-sep { margin: 0 0.375rem; }
 
   /* ============ Scrollbar ============ */
   ::-webkit-scrollbar { width: 6px; height: 6px; }

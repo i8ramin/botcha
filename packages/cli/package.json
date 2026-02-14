@@ -1,6 +1,6 @@
 {
   "name": "@dupecom/botcha-cli",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "CLI tool for testing and debugging BOTCHA-protected endpoints",
   "type": "module",
   "main": "dist/index.js",
@@ -16,6 +16,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
+    "postinstall": "node bin/postinstall.js",
     "prepublishOnly": "bun run build"
   },
   "keywords": [

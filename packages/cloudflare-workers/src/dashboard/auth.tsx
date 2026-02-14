@@ -591,9 +591,8 @@ export async function renderLoginPage(c: Context<{ Bindings: Bindings }>) {
         </div>
       </div>
 
-      <p class="text-muted" style="font-size: 0.75rem; text-align: center; line-height: 1.8; margin-bottom: 1.5rem;">
-        Your agent solves a challenge, gets a code, and gives you a link.<br/>
-        Click it. You're in the dashboard.
+      <p class="text-muted" style="font-size: 0.75rem; text-align: center; line-height: 1.8; margin-bottom: 1.5rem; padding: 0 2rem;">
+        Your agent solves a challenge, gets a code, and gives you a link.
       </p>
 
       <Divider text="returning user?" />

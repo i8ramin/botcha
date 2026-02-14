@@ -8,7 +8,7 @@ Nobody is building the agent-side identity layer. Everyone is building "block bo
 
 ---
 
-## Current Status (v0.12.0)
+## Current Status (v0.15.0)
 
 ### Shipped
 
@@ -146,6 +146,19 @@ Every token gets a unique `jti` claim for revocation tracking and audit trail.
 - Crypto-random agent IDs with `agent_` prefix
 - Fail-open validation (KV errors don't block requests)
 **Effort:** Large
+
+### ✅ TAP Showcase Homepage — SHIPPED (v0.15.0)
+**What:** Showcase page becomes the botcha.ai homepage. TAP is the lead feature with Visa reference links, protocol stack diagram, animated terminal demo, CAPTCHA vs BOTCHA comparison, agent prompt, and 3-step getting started flow.
+**Status:** Live at botcha.ai. Old `/showcase` 301-redirects to `/`. Bot JSON/markdown API endpoints unaffected.
+**Implementation:**
+- Showcase page renders at `GET /` for browsers; bots still get JSON/markdown API docs
+- TAP hero section with Visa Developer Docs, Visa Announcement, and GitHub Spec links
+- Protocol stack: MCP (tools) → A2A (communication) → TAP (identity)
+- Terminal animation with IntersectionObserver (plays once on scroll, replay button)
+- Agent prompt card with click-to-copy at page bottom
+- CLI postinstall message guides users to `botcha init`
+- Dashboard and Login links in footer
+**Effort:** Medium
 
 ### ✅ Trusted Agent Protocol (TAP) — SHIPPED (v0.12.0)
 **What:** Enterprise-grade cryptographic agent authentication using HTTP Message Signatures (RFC 9421). TAP-enabled agents register public keys, sign requests, and create capability-scoped sessions.

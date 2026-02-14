@@ -51,6 +51,7 @@ Feature: Agent Registry (persistent agent identities with name, operator, versio
 Feature: Trusted Agent Protocol (TAP) — cryptographic agent auth with HTTP Message Signatures (RFC 9421)
 Feature: TAP Capabilities (action + resource scoping for agent sessions)
 Feature: TAP Trust Levels (basic, verified, enterprise)
+Feature: TAP Showcase Homepage (botcha.ai — one of the first services to implement Visa's Trusted Agent Protocol)
 
 # Challenge Endpoints
 Endpoint: GET https://botcha.ai/v1/challenges - Generate challenge (hybrid by default)

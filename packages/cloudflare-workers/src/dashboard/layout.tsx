@@ -44,6 +44,45 @@ export const Card: FC<PropsWithChildren<{ title: string; badge?: string; class?:
   );
 };
 
+// ============ GLOBAL FOOTER ============
+
+/**
+ * Global footer used on every page.
+ * Dashboard button + text links + copyright.
+ */
+export const GlobalFooter: FC<{ version?: string }> = ({ version = '0.15.0' }) => {
+  const year = new Date().getFullYear();
+  return (
+    <footer class="global-footer">
+      <div class="global-footer-inner">
+        <a href="/dashboard" class="global-footer-dashboard">Dashboard</a>
+        <div class="global-footer-links">
+          <span>v{version}</span>
+          <span class="global-footer-sep">&middot;</span>
+          <a href="https://botcha.ai">botcha.ai</a>
+          <span class="global-footer-sep">&middot;</span>
+          <a href="/openapi.json">OpenAPI</a>
+          <span class="global-footer-sep">&middot;</span>
+          <a href="/ai.txt">ai.txt</a>
+          <span class="global-footer-sep">&middot;</span>
+          <a href="https://github.com/dupe-com/botcha">GitHub</a>
+          <span class="global-footer-sep">&middot;</span>
+          <a href="https://www.npmjs.com/package/@dupecom/botcha">npm</a>
+          <span class="global-footer-sep">&middot;</span>
+          <a href="https://pypi.org/project/botcha/">PyPI</a>
+        </div>
+        <div class="global-footer-legal">
+          &copy; {year} <a href="https://dupe.com">Dupe.com</a>
+          <span class="global-footer-sep">&middot;</span>
+          Free and open source
+          <span class="global-footer-sep">&middot;</span>
+          <a href="https://github.com/i8ramin">@i8ramin</a>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
 /**
  * Divider with centered text, used between sections on auth pages.
  */
@@ -55,7 +94,7 @@ export const Divider: FC<{ text: string }> = ({ text }) => (
  * Main dashboard layout with navigation
  * Used for authenticated dashboard pages
  */
-export const DashboardLayout: FC<PropsWithChildren<{ title?: string; appId?: string }>> = ({ children, title, appId }) => {
+export const DashboardLayout: FC<PropsWithChildren<{ title?: string; appId?: string; version?: string }>> = ({ children, title, appId, version }) => {
   return (
     <html lang="en">
       <head>
@@ -87,6 +126,7 @@ export const DashboardLayout: FC<PropsWithChildren<{ title?: string; appId?: str
           </div>
         </nav>
         <main class="dashboard-main">{children}</main>
+        <GlobalFooter version={version} />
       </body>
     </html>
   );
@@ -96,7 +136,7 @@ export const DashboardLayout: FC<PropsWithChildren<{ title?: string; appId?: str
  * Login/auth layout without navigation
  * Used for login, signup, and other auth pages
  */
-export const LoginLayout: FC<PropsWithChildren<{ title?: string }>> = ({ children, title }) => {
+export const LoginLayout: FC<PropsWithChildren<{ title?: string; version?: string }>> = ({ children, title, version }) => {
   return (
     <html lang="en">
       <head>
@@ -115,6 +155,7 @@ export const LoginLayout: FC<PropsWithChildren<{ title?: string }>> = ({ childre
         <div class="login-container">
           <div class="login-box">{children}</div>
         </div>
+        <GlobalFooter version={version} />
       </body>
     </html>
   );
@@ -173,6 +214,7 @@ export const LandingLayout: FC<PropsWithChildren<{ version: string }>> = ({ chil
         <div class="login-container">
           <div class="landing-box">{children}</div>
         </div>
+        <GlobalFooter version={version} />
       </body>
     </html>
   );

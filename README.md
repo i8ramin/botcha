@@ -37,6 +37,7 @@ Use cases:
 - 🤖 Agent-first dashboard auth (challenge-based login + device code handoff)
 - 🆔 Persistent agent identities with registry
 - 🔏 Trusted Agent Protocol (TAP) — cryptographic agent auth with HTTP Message Signatures (SDK: `registerTAPAgent`, `createTAPSession`)
+- 🌐 TAP showcase homepage at [botcha.ai](https://botcha.ai) — one of the first services to implement [Visa's Trusted Agent Protocol](https://github.com/visa/trusted-agent-protocol)
 
 ## Install
 
@@ -555,7 +556,7 @@ BOTCHA is designed to be auto-discoverable by AI agents through multiple standar
 All responses include these headers for agent discovery:
 
 ```http
-X-Botcha-Version: 0.12.0
+X-Botcha-Version: 0.15.0
 X-Botcha-Enabled: true
 X-Botcha-Methods: hybrid-challenge,speed-challenge,reasoning-challenge,standard-challenge
 X-Botcha-Docs: https://botcha.ai/openapi.json

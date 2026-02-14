@@ -172,16 +172,6 @@ export const LandingPage: FC<{ version: string; error?: string }> = ({ version, 
 
       <script dangerouslySetInnerHTML={{ __html: COPY_SCRIPT }} />
 
-      {/* ---- Footer ---- */}
-      <div class="landing-footer">
-        <span>v{version}</span>
-        <span class="landing-footer-sep">&middot;</span>
-        <a href="/openapi.json">API</a>
-        <span class="landing-footer-sep">&middot;</span>
-        <a href="https://github.com/dupe-com/botcha">GitHub</a>
-        <span class="landing-footer-sep">&middot;</span>
-        <a href="https://github.com/i8ramin">@i8ramin</a>
-      </div>
     </LandingLayout>
   );
 };
@@ -293,14 +283,6 @@ pip install botcha-verify       # FastAPI/Django`}</code></pre>
 
       <script dangerouslySetInnerHTML={{ __html: VERIFIED_COPY_SCRIPT }} />
 
-      {/* ---- Footer ---- */}
-      <div class="landing-footer">
-        <span>v{version}</span>
-        <span class="landing-footer-sep">&middot;</span>
-        <a href="https://botcha.ai">botcha.ai</a>
-        <span class="landing-footer-sep">&middot;</span>
-        <a href="https://github.com/i8ramin">@i8ramin</a>
-      </div>
     </LandingLayout>
   );
 };

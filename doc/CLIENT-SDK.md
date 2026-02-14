@@ -6,9 +6,9 @@
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@dupecom/botcha`](https://www.npmjs.com/package/@dupecom/botcha) | 0.13.1 | Core SDK with client (`/client` export) + middleware (`/middleware` export) |
+| [`@dupecom/botcha`](https://www.npmjs.com/package/@dupecom/botcha) | 0.15.0 | Core SDK with client (`/client` export) + middleware (`/middleware` export) |
 | [`@dupecom/botcha-langchain`](https://www.npmjs.com/package/@dupecom/botcha-langchain) | 0.1.0 | LangChain Tool integration |
-| [`botcha`](https://pypi.org/project/botcha/) (Python) | 0.4.0 | Python SDK on PyPI |
+| [`botcha`](https://pypi.org/project/botcha/) (Python) | 0.5.0 | Python SDK on PyPI |
 | [`@botcha/verify`](../packages/verify/) | 0.1.0 | Server-side verification (Express/Hono middleware) |
 | [`botcha-verify`](../packages/python-verify/) | 0.1.0 | Server-side verification (FastAPI/Django middleware) |
 
@@ -474,7 +474,7 @@ try {
 
 ## Python SDK
 
-**Status:** ✅ Published on [PyPI](https://pypi.org/project/botcha/) (v0.3.0)
+**Status:** ✅ Published on [PyPI](https://pypi.org/project/botcha/) (v0.5.0)
 
 The Python SDK provides the same capabilities as the TypeScript client, including token rotation, audience claims, and automatic refresh.
 

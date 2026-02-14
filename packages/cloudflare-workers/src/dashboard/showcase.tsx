@@ -13,6 +13,7 @@
  */
 
 import type { FC } from 'hono/jsx';
+import { GlobalFooter } from './layout';
 
 // ============ CSS ============
 
@@ -30,7 +31,96 @@ export const SHOWCASE_CSS = `
     border-top: 1px solid var(--border);
   }
 
-  /* ============ Section 1: Hero ============ */
+  /* ============ Section 1: TAP Announcement Hero ============ */
+  .showcase-tap-hero {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 4rem 2rem 3rem;
+    text-align: center;
+  }
+
+  .showcase-tap-hero-badge {
+    display: inline-block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.875rem;
+    background: var(--green);
+    color: #fff;
+    margin-bottom: 1.5rem;
+  }
+
+  .showcase-tap-hero-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0 0 1.25rem;
+    color: var(--text);
+  }
+
+  .showcase-tap-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .showcase-tap-link {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.15s;
+  }
+
+  .showcase-tap-link:hover {
+    color: var(--green);
+    opacity: 1;
+  }
+
+  .showcase-tap-links-sep {
+    color: var(--text-dim);
+    font-size: 0.625rem;
+  }
+
+  .showcase-tap-hero-subtitle {
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto 2.5rem;
+  }
+
+  .showcase-tap-hero-features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    text-align: left;
+  }
+
+  .showcase-tap-feature {
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .showcase-tap-feature-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .showcase-tap-feature-desc {
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  /* ============ CAPTCHA vs BOTCHA Comparison ============ */
   .showcase-hero {
     max-width: 1100px;
     margin: 0 auto;
@@ -322,7 +412,8 @@ export const SHOWCASE_CSS = `
     font-size: 0.8125rem;
     line-height: 1.6;
     color: #f0f0f0;
-    min-height: 340px;
+    height: 460px;
+    overflow-y: hidden;
     font-family: var(--font);
   }
 
@@ -531,13 +622,101 @@ export const SHOWCASE_CSS = `
     color: var(--text);
   }
 
-  .showcase-footer-install {
-    font-size: 0.875rem;
-    padding: 0.75rem 1.5rem;
+  .showcase-footer-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 420px;
+    margin: 0 auto 2rem;
+    text-align: left;
+  }
+
+  .showcase-footer-step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.8125rem;
+    padding: 0.625rem 1rem;
     background: var(--bg-raised);
     border: 1px solid var(--border);
-    display: inline-block;
-    margin-bottom: 2rem;
+  }
+
+  .showcase-footer-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.375rem;
+    height: 1.375rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    border: 1px solid var(--border-bright);
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .showcase-footer-step code {
+    color: var(--text);
+  }
+
+  .showcase-agent-prompt {
+    max-width: 520px;
+    margin: 2rem auto 2.5rem;
+    text-align: center;
+  }
+
+  .showcase-agent-prompt-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+  }
+
+  .showcase-agent-prompt-card {
+    display: block;
+    width: 100%;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    cursor: pointer;
+    font-family: var(--font);
+    text-align: left;
+    transition: border-color 0.15s;
+  }
+
+  .showcase-agent-prompt-card:hover {
+    border-color: var(--accent);
+  }
+
+  .showcase-agent-prompt-card code {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.5;
+    background: none;
+    border: none;
+    padding: 0;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .showcase-agent-prompt-copy {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.75rem;
+    font-size: 0.625rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+  }
+
+  .showcase-agent-prompt-copy span {
+    display: flex;
   }
 
   .showcase-footer-links {
@@ -578,6 +757,13 @@ export const SHOWCASE_CSS = `
 
   /* ============ Responsive ============ */
   @media (max-width: 768px) {
+    .showcase-tap-hero { padding: 3rem 1rem 2rem; }
+    .showcase-tap-hero-title { font-size: 1.75rem; }
+    .showcase-tap-hero-features {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
     .showcase-hero { padding: 2rem 1rem 1rem; }
     .showcase-hero-grid {
       grid-template-columns: 1fr;
@@ -597,7 +783,7 @@ export const SHOWCASE_CSS = `
     }
 
     .showcase-terminal-section { padding: 3rem 1rem; }
-    .showcase-terminal-content { padding: 1rem; font-size: 0.75rem; min-height: 300px; }
+    .showcase-terminal-content { padding: 1rem; font-size: 0.75rem; height: 420px; }
 
     .showcase-livedemo { padding: 3rem 1rem; }
 
@@ -647,61 +833,80 @@ const TERMINAL_ANIMATION_SCRIPT = `
   var replayBtn = document.getElementById('terminal-replay');
   var currentTimeout;
   var running = false;
+  var hasPlayed = false;
+  var cancelled = false;
 
   function highlightFlags(cmd) {
     return cmd.replace(/(--[a-z-]+)/g, '<span class="showcase-terminal-flag">$1</span>');
   }
 
   function sleep(ms) {
-    return new Promise(function(r) { currentTimeout = setTimeout(r, ms); });
+    return new Promise(function(resolve, reject) {
+      currentTimeout = setTimeout(resolve, ms);
+    });
   }
 
   async function animate() {
     if (running) return;
     running = true;
+    cancelled = false;
     content.innerHTML = '';
 
-    for (var c = 0; c < commands.length; c++) {
-      var item = commands[c];
-      var line = document.createElement('div');
-      line.className = 'showcase-terminal-line';
-      line.innerHTML = '<span class="showcase-terminal-prompt">$ </span><span class="showcase-terminal-command"></span><span class="showcase-terminal-cursor">\\u2589</span>';
-      content.appendChild(line);
+    try {
+      for (var c = 0; c < commands.length; c++) {
+        if (cancelled) return;
+        var item = commands[c];
+        var line = document.createElement('div');
+        line.className = 'showcase-terminal-line';
+        line.innerHTML = '<span class="showcase-terminal-prompt">$ </span><span class="showcase-terminal-command"></span><span class="showcase-terminal-cursor">\\u2589</span>';
+        content.appendChild(line);
 
-      var cmdSpan = line.querySelector('.showcase-terminal-command');
-      var cursor = line.querySelector('.showcase-terminal-cursor');
+        var cmdSpan = line.querySelector('.showcase-terminal-command');
+        var cursor = line.querySelector('.showcase-terminal-cursor');
 
-      for (var i = 0; i < item.cmd.length; i++) {
-        await sleep(35);
-        cmdSpan.textContent = item.cmd.slice(0, i + 1);
+        for (var i = 0; i < item.cmd.length; i++) {
+          if (cancelled) return;
+          await sleep(35);
+          cmdSpan.textContent = item.cmd.slice(0, i + 1);
+        }
+
+        cmdSpan.innerHTML = highlightFlags(item.cmd);
+        cursor.remove();
+        await sleep(300);
+
+        for (var r = 0; r < item.response.length; r++) {
+          if (cancelled) return;
+          var respLine = document.createElement('div');
+          respLine.className = 'showcase-terminal-line';
+          respLine.innerHTML = item.response[r];
+          content.appendChild(respLine);
+        }
+
+        await sleep(800);
       }
-
-      cmdSpan.innerHTML = highlightFlags(item.cmd);
-      cursor.remove();
-      await sleep(300);
-
-      for (var r = 0; r < item.response.length; r++) {
-        var respLine = document.createElement('div');
-        respLine.className = 'showcase-terminal-line';
-        respLine.innerHTML = item.response[r];
-        content.appendChild(respLine);
-      }
-
-      await sleep(800);
+    } finally {
+      running = false;
+      hasPlayed = true;
     }
-
-    await sleep(2500);
-    running = false;
-    animate();
   }
 
+  // Replay button — cancel any in-progress animation and restart
   replayBtn.addEventListener('click', function() {
     clearTimeout(currentTimeout);
+    cancelled = true;
     running = false;
     animate();
   });
 
-  animate();
+  // IntersectionObserver — play once when terminal scrolls into view
+  var observer = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting && !hasPlayed && !running) {
+      animate();
+      observer.disconnect();
+    }
+  }, { threshold: 0.3 });
+
+  observer.observe(content);
 })();
 `;
 
@@ -793,6 +998,30 @@ const LIVE_DEMO_SCRIPT = `
 })();
 `;
 
+// ============ COPY PROMPT ============
+
+const COPY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="9" y="9" width="13" height="13" rx="0"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>`;
+const CHECK_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+const COPY_PROMPT_SCRIPT = `
+function copyPrompt() {
+  var text = document.getElementById('agent-prompt').textContent.trim();
+  navigator.clipboard.writeText(text).then(function() {
+    var label = document.getElementById('copy-label');
+    var icon = document.getElementById('copy-icon');
+    var txt = document.getElementById('copy-text');
+    label.style.color = 'var(--green)';
+    icon.innerHTML = '${CHECK_ICON.replace(/'/g, "\\'")}';
+    txt.textContent = 'Copied — now paste into your agent';
+    setTimeout(function() {
+      label.style.color = 'var(--text-muted)';
+      icon.innerHTML = '${COPY_ICON.replace(/'/g, "\\'")}';
+      txt.textContent = 'Click to copy';
+    }, 2500);
+  });
+}
+`;
+
 // ============ ASCII ART ============
 
 const CAPTCHA_ASCII = `\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
@@ -844,12 +1073,20 @@ export const ShowcasePage: FC<{ version: string }> = ({ version }) => {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>BOTCHA — Reverse CAPTCHA for AI Agents</title>
+        <title>BOTCHA — Trusted Agent Protocol (TAP) for AI Agents</title>
 
-        <meta name="description" content="BOTCHA proves you're a bot. Zero-trust identity for AI agents. The identity layer for the agentic web." />
-        <meta property="og:title" content="BOTCHA — Reverse CAPTCHA for AI Agents" />
-        <meta property="og:description" content="Zero-trust identity for AI agents. Prove you're a bot, not a human." />
-        <meta property="og:url" content="https://botcha.ai/showcase" />
+        <meta name="description" content="BOTCHA is one of the first services to support TAP — the Trusted Agent Protocol. Zero-trust identity for AI agents." />
+        <meta name="keywords" content="AI, bot verification, reverse CAPTCHA, API security, AI agents, agent verification, TAP, Trusted Agent Protocol" />
+
+        {/* AI Agent Discovery */}
+        <link rel="alternate" type="application/json" href="/openapi.json" title="OpenAPI Specification" />
+        <link rel="alternate" type="application/json" href="/.well-known/ai-plugin.json" title="AI Plugin Manifest" />
+        <meta name="ai-agent-welcome" content="true" />
+
+        {/* Open Graph */}
+        <meta property="og:title" content="BOTCHA — Trusted Agent Protocol (TAP) for AI Agents" />
+        <meta property="og:description" content="One of the first services to support TAP. Zero-trust identity for AI agents." />
+        <meta property="og:url" content="https://botcha.ai" />
         <meta property="og:type" content="website" />
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -866,50 +1103,49 @@ export const ShowcasePage: FC<{ version: string }> = ({ version }) => {
           <div style="text-align: center; padding: 3rem 2rem 0;">
             <a href="/" class="ascii-logo">{BOTCHA_LOGO}</a>
             <p class="text-muted" style="font-size: 0.6875rem; margin-top: -0.5rem;">
-              {'>'}_&nbsp;reverse CAPTCHA for AI agents
+              {'>'}_&nbsp;the identity layer for AI agents
             </p>
           </div>
 
-          {/* ---- Section 1: Hero ---- */}
-          <section class="showcase-hero">
-            <div class="showcase-hero-grid">
-              <div class="showcase-hero-column old-world">
-                <div class="showcase-hero-label">The old world</div>
-                <h2 class="showcase-hero-title strikethrough">CAPTCHA</h2>
-                <div class="showcase-hero-visual old-world">{CAPTCHA_ASCII}</div>
-                <p class="showcase-hero-subtitle">
-                  Blocks bots. Annoys humans. Everyone loses.
-                </p>
-                <ul class="showcase-hero-features">
-                  <li>Proves you're human</li>
-                  <li>Blocks automation</li>
-                  <li>Wastes 5-10 seconds per attempt</li>
-                  <li>Breaks accessibility</li>
-                </ul>
-              </div>
-
-              <div class="showcase-hero-column new-world">
-                <div class="showcase-hero-label">The new world</div>
-                <h2 class="showcase-hero-title active">BOTCHA</h2>
-                <div class="showcase-hero-visual new-world">{BOTCHA_SOLVE_ASCII}</div>
-                <p class="showcase-hero-subtitle">
-                  Welcomes bots. Proves they're AI. Everyone wins.
-                </p>
-                <ul class="showcase-hero-features">
-                  <li>Proves you're a bot</li>
-                  <li>Agent identity layer</li>
-                  <li>Sub-500ms verification</li>
-                  <li>Built for the agentic web</li>
-                </ul>
-              </div>
+          {/* ---- Section 1: TAP Announcement Hero ---- */}
+          <section class="showcase-tap-hero">
+            <div class="showcase-tap-hero-badge">Announcing TAP Support</div>
+            <h1 class="showcase-tap-hero-title">
+              Trusted Agent Protocol
+            </h1>
+            <div class="showcase-tap-links">
+              <a href="https://developer.visa.com/capabilities/trusted-agent-protocol/overview" target="_blank" rel="noopener" class="showcase-tap-link">Visa Developer Docs</a>
+              <span class="showcase-tap-links-sep">&middot;</span>
+              <a href="https://investor.visa.com/news/news-details/2025/Visa-Introduces-Trusted-Agent-Protocol-An-Ecosystem-Led-Framework-for-AI-Commerce/default.aspx" target="_blank" rel="noopener" class="showcase-tap-link">Visa Announcement</a>
+              <span class="showcase-tap-links-sep">&middot;</span>
+              <a href="https://github.com/visa/trusted-agent-protocol" target="_blank" rel="noopener" class="showcase-tap-link">GitHub Spec</a>
             </div>
-
-            <div class="showcase-hero-tagline">
-              <div class="showcase-hero-tagline-main">
-                Zero-trust identity for AI agents
+            <p class="showcase-tap-hero-subtitle">
+              BOTCHA is one of the first services to implement TAP — a protocol for
+              zero-trust agent identity. Register agents, scope capabilities,
+              and create sessions with cryptographic proof.
+            </p>
+            <div class="showcase-tap-hero-features">
+              <div class="showcase-tap-feature">
+                <div class="showcase-tap-feature-title">Agent Registration</div>
+                <div class="showcase-tap-feature-desc">
+                  Register agents with names, capabilities, and operator metadata.
+                  Each agent gets a unique cryptographic identity.
+                </div>
               </div>
-              <div class="showcase-hero-tagline-sub">
-                The identity layer for the agentic web
+              <div class="showcase-tap-feature">
+                <div class="showcase-tap-feature-title">Capability Scoping</div>
+                <div class="showcase-tap-feature-desc">
+                  Declare what an agent can do — browse, search, purchase — and enforce
+                  it at the protocol level. No over-permissioning.
+                </div>
+              </div>
+              <div class="showcase-tap-feature">
+                <div class="showcase-tap-feature-title">Scoped Sessions</div>
+                <div class="showcase-tap-feature-desc">
+                  Create time-limited sessions tied to specific actions and resources.
+                  Sessions expire, capabilities are bounded.
+                </div>
               </div>
             </div>
           </section>
@@ -1004,52 +1240,81 @@ export const ShowcasePage: FC<{ version: string }> = ({ version }) => {
             <script dangerouslySetInnerHTML={{ __html: TERMINAL_ANIMATION_SCRIPT }} />
           </section>
 
-          {/* ---- Section 4: Live Demo ---- */}
-          <section class="showcase-livedemo">
-            <div class="showcase-livedemo-container">
-              <h2 class="showcase-livedemo-title">Try it yourself</h2>
-              <p class="showcase-livedemo-subtitle">
-                Click the button. Watch a real challenge get solved in your browser. Only a bot can do this in under 500ms.
-              </p>
+          {/* ---- Section 4: CAPTCHA vs BOTCHA ---- */}
+          <section class="showcase-hero">
+            <div class="showcase-hero-grid">
+              <div class="showcase-hero-column old-world">
+                <div class="showcase-hero-label">The old world</div>
+                <h2 class="showcase-hero-title strikethrough">CAPTCHA</h2>
+                <div class="showcase-hero-visual old-world">{CAPTCHA_ASCII}</div>
+                <p class="showcase-hero-subtitle">
+                  Blocks bots. Annoys humans. Everyone loses.
+                </p>
+                <ul class="showcase-hero-features">
+                  <li>Proves you're human</li>
+                  <li>Blocks automation</li>
+                  <li>Wastes 5-10 seconds per attempt</li>
+                  <li>Breaks accessibility</li>
+                </ul>
+              </div>
 
-              <button id="botcha-demo-button" class="showcase-livedemo-button">
-                Solve a BOTCHA challenge
-              </button>
+              <div class="showcase-hero-column new-world">
+                <div class="showcase-hero-label">The new world</div>
+                <h2 class="showcase-hero-title active">BOTCHA</h2>
+                <div class="showcase-hero-visual new-world">{BOTCHA_SOLVE_ASCII}</div>
+                <p class="showcase-hero-subtitle">
+                  Welcomes bots. Proves they're AI. Everyone wins.
+                </p>
+                <ul class="showcase-hero-features">
+                  <li>Proves you're a bot</li>
+                  <li>Agent identity layer</li>
+                  <li>Sub-500ms verification</li>
+                  <li>Built for the agentic web</li>
+                </ul>
+              </div>
+            </div>
+          </section>
 
-              <div id="botcha-demo-result" class="showcase-livedemo-result" style="display: none;"></div>
-              <div id="botcha-demo-error" class="showcase-livedemo-error" style="display: none;"></div>
-              <div id="botcha-demo-counter" class="showcase-livedemo-counter">
-                Challenges solved on this page: 0
+          {/* ---- Get Started + Agent Prompt ---- */}
+          <div class="showcase-footer">
+            <div class="showcase-footer-cta">Get started in 30 seconds</div>
+            <div class="showcase-footer-steps">
+              <div class="showcase-footer-step">
+                <span class="showcase-footer-step-number">1</span>
+                <code>npm install -g @dupecom/botcha-cli</code>
+              </div>
+              <div class="showcase-footer-step">
+                <span class="showcase-footer-step-number">2</span>
+                <code>botcha init --email you@company.com</code>
+              </div>
+              <div class="showcase-footer-step">
+                <span class="showcase-footer-step-number">3</span>
+                <code>botcha tap register --name "my-agent"</code>
               </div>
             </div>
 
-            <script dangerouslySetInnerHTML={{ __html: LIVE_DEMO_SCRIPT }} />
-          </section>
-
-          {/* ---- Footer ---- */}
-          <div class="showcase-footer">
-            <div class="showcase-footer-cta">Get started in 30 seconds</div>
-            <div class="showcase-footer-install">
-              <code>npm install -g @dupecom/botcha-cli</code>
-            </div>
-
-            <div class="showcase-footer-links">
-              <a href="/" class="showcase-footer-link">Home</a>
-              <a href="/openapi.json" class="showcase-footer-link">OpenAPI</a>
-              <a href="/ai.txt" class="showcase-footer-link">ai.txt</a>
-              <a href="https://github.com/dupe-com/botcha" class="showcase-footer-link">GitHub</a>
-              <a href="https://www.npmjs.com/package/@dupecom/botcha" class="showcase-footer-link">npm</a>
-              <a href="https://pypi.org/project/botcha/" class="showcase-footer-link">PyPI</a>
-            </div>
-
-            <div class="showcase-footer-meta">
-              <span>v{version}</span>
-              <span class="showcase-footer-sep">&middot;</span>
-              <a href="https://botcha.ai">botcha.ai</a>
-              <span class="showcase-footer-sep">&middot;</span>
-              <a href="https://github.com/i8ramin">@i8ramin</a>
+            {/* ---- Agent Prompt ---- */}
+            <div class="showcase-agent-prompt">
+              <p class="showcase-agent-prompt-label">Or paste this into your AI agent</p>
+              <button
+                id="prompt-btn"
+                onclick="copyPrompt()"
+                type="button"
+                class="showcase-agent-prompt-card"
+              >
+                <code id="agent-prompt">Run: curl -s https://botcha.ai -H 'Accept: application/json' — then follow the instructions in the response to verify yourself and get me access.</code>
+                <span id="copy-label" class="showcase-agent-prompt-copy">
+                  <span id="copy-icon" dangerouslySetInnerHTML={{ __html: COPY_ICON }} />
+                  <span id="copy-text">Click to copy</span>
+                </span>
+              </button>
             </div>
           </div>
+
+          {/* ---- Global Footer ---- */}
+          <GlobalFooter version={version} />
+
+          <script dangerouslySetInnerHTML={{ __html: COPY_PROMPT_SCRIPT }} />
 
         </div>
       </body>

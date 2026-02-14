@@ -38,7 +38,7 @@ import {
 import { ROBOTS_TXT, AI_TXT, AI_PLUGIN_JSON, SITEMAP_XML, getOpenApiSpec, getBotchaMarkdown } from './static';
 import { createApp, getApp, getAppByEmail, verifyEmailCode, rotateAppSecret, regenerateVerificationCode } from './apps';
 import { sendEmail, verificationEmail, recoveryEmail, secretRotatedEmail } from './email';
-import { LandingPage, VerifiedLandingPage } from './dashboard/landing';
+import { LandingPage } from './dashboard/landing';
 import { ShowcasePage } from './dashboard/showcase';
 import { createAgent, getAgent, listAgents } from './agents';
 import {
@@ -91,7 +91,7 @@ app.route('/dashboard', dashboardRoutes);
 // BOTCHA discovery headers
 app.use('*', async (c, next) => {
   await next();
-  c.header('X-Botcha-Version', c.env.BOTCHA_VERSION || '0.14.0');
+  c.header('X-Botcha-Version', c.env.BOTCHA_VERSION || '0.15.0');
   c.header('X-Botcha-Enabled', 'true');
   c.header('X-Botcha-Methods', 'speed-challenge,reasoning-challenge,hybrid-challenge,standard-challenge,jwt-token');
   c.header('X-Botcha-Docs', 'https://botcha.ai/openapi.json');
@@ -205,7 +205,7 @@ function detectAcceptPreference(c: Context<{ Bindings: Bindings; Variables: Vari
 }
 
 app.get('/', async (c) => {
-  const version = c.env.BOTCHA_VERSION || '0.14.0';
+  const version = c.env.BOTCHA_VERSION || '0.15.0';
   const preference = detectAcceptPreference(c);
   const baseUrl = new URL(c.req.url).origin;
 
@@ -223,34 +223,9 @@ app.get('/', async (c) => {
     }
   }
 
-  // HTML: landing page for human browsers
+  // HTML: showcase page for human browsers
   if (preference === 'html') {
-    // Check for visitor cookie (set by POST /gate after human enters agent's token)
-    const cookieHeader = c.req.header('cookie') || '';
-    const visitorToken = cookieHeader.split(';').find(ck => ck.trim().startsWith('botcha_visitor='))?.split('=')[1]?.trim();
-    
-    if (visitorToken) {
-      // Verify visitor cookie — accepts both botcha-verified (legacy) and botcha-visitor (long-lived)
-      try {
-        const { payload: vPayload } = await jwtVerify(visitorToken, new TextEncoder().encode(c.env.JWT_SECRET), { algorithms: ['HS256'] });
-        if (vPayload.type === 'botcha-visitor' || vPayload.type === 'botcha-verified') {
-          return c.html(<VerifiedLandingPage version={version} solveTime={vPayload.solveTime as number | undefined} />);
-        }
-      } catch {
-        // Invalid/expired cookie — fall through to unverified landing
-      }
-    }
-
-    // Check for error from /go/:code redirect
-    const url = new URL(c.req.url);
-    const errorParam = url.searchParams.get('error');
-    const errorMap: Record<string, string> = {
-      invalid: 'Invalid or expired code. Ask your agent to try again.',
-      missing: 'No code provided.',
-    };
-    const error = errorParam ? errorMap[errorParam] : undefined;
-
-    return c.html(<LandingPage version={version} error={error} />);
+    return c.html(<ShowcasePage version={version} />);
   }
 
   // === UNVERIFIED: minimal teaser — just enough to get started ===
@@ -433,7 +408,7 @@ The link works for 5 minutes. Your human clicks it, gets a cookie, and sees the 
 // POST /gate — human enters short code (BOTCHA-XXXXXX) from their agent
 // The code maps to a JWT in KV. This structural separation means agents can't skip the handoff.
 app.post('/gate', async (c) => {
-  const version = c.env.BOTCHA_VERSION || '0.14.0';
+  const version = c.env.BOTCHA_VERSION || '0.15.0';
   const body = await c.req.parseBody();
   const input = (body['code'] as string || '').trim().toUpperCase();
 
@@ -448,10 +423,9 @@ app.post('/gate', async (c) => {
   return c.redirect(`/go/${code}`);
 });
 
-// ============ SHOWCASE PAGE ============
+// ============ SHOWCASE PAGE (legacy URL, redirect to home) ============
 app.get('/showcase', (c) => {
-  const version = c.env.BOTCHA_VERSION || '0.14.0';
-  return c.html(<ShowcasePage version={version} />);
+  return c.redirect('/', 301);
 });
 
 app.get('/health', (c) => {
@@ -478,7 +452,7 @@ app.get('/ai.txt', (c) => {
 
 // OpenAPI spec
 app.get('/openapi.json', (c) => {
-  const version = c.env.BOTCHA_VERSION || '0.14.0';
+  const version = c.env.BOTCHA_VERSION || '0.15.0';
   return c.json(getOpenApiSpec(version), 200, {
     'Cache-Control': 'public, max-age=3600',
   });
