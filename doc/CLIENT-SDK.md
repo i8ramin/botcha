@@ -6,7 +6,7 @@
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@dupecom/botcha`](https://www.npmjs.com/package/@dupecom/botcha) | 0.12.0 | Core SDK with client (`/client` export) |
+| [`@dupecom/botcha`](https://www.npmjs.com/package/@dupecom/botcha) | 0.13.1 | Core SDK with client (`/client` export) + middleware (`/middleware` export) |
 | [`@dupecom/botcha-langchain`](https://www.npmjs.com/package/@dupecom/botcha-langchain) | 0.1.0 | LangChain Tool integration |
 | [`botcha`](https://pypi.org/project/botcha/) (Python) | 0.4.0 | Python SDK on PyPI |
 | [`@botcha/verify`](../packages/verify/) | 0.1.0 | Server-side verification (Express/Hono middleware) |
@@ -24,7 +24,7 @@ The client SDK allows AI agents to:
 7. ✅ Token revocation for compromised tokens
 8. ✅ App creation with email verification (SDK methods)
 9. ✅ Account recovery and secret rotation (SDK methods)
-10. ✅ TAP (Trusted Agent Protocol) — cryptographic agent auth with public keys and capability-scoped sessions
+10. ✅ TAP (Trusted Agent Protocol) — cryptographic agent auth with public keys and capability-scoped sessions (SDK: `registerTAPAgent`, `getTAPAgent`, `listTAPAgents`, `createTAPSession`, `getTAPSession`)
 
 ## Implemented API
 
@@ -555,6 +555,11 @@ The Python SDK mirrors the TypeScript API:
 - `resend_verification(app_id?)` - Resend verification email
 - `recover_account(email)` - Request account recovery via email
 - `rotate_secret(app_id?)` - Rotate app secret (requires session token)
+- `register_tap_agent(name, operator?, ...)` → Register TAP agent
+- `get_tap_agent(agent_id)` → Get TAP agent details
+- `list_tap_agents(tap_only?)` → List TAP agents for app
+- `create_tap_session(agent_id, user_context, intent)` → Create TAP session
+- `get_tap_session(session_id)` → Get TAP session details
 - `close()` - Close client and clear cached tokens
 
 **Constructor parameters:**
@@ -731,6 +736,51 @@ curl https://botcha.ai/v1/sessions/sess_abc123/tap
 | `/v1/agents/tap` | GET | List TAP-enabled agents for app (`?tap_only=true` to filter) |
 | `/v1/sessions/tap` | POST | Create TAP session with intent validation |
 | `/v1/sessions/:id/tap` | GET | Get TAP session info (includes time remaining) |
+
+### TAP SDK Methods
+
+**TypeScript:**
+
+```typescript
+import { BotchaClient } from '@dupecom/botcha/client';
+
+const client = new BotchaClient({ appId: 'app_abc123' });
+
+// Register a TAP agent
+const agent = await client.registerTAPAgent({
+  name: 'my-agent',
+  operator: 'Acme Corp',
+  capabilities: [{ action: 'browse', scope: ['products'] }],
+  trust_level: 'verified',
+});
+
+// Create a TAP session
+const session = await client.createTAPSession({
+  agent_id: agent.agent_id,
+  user_context: 'user-hash',
+  intent: { action: 'browse', resource: 'products', duration: 3600 },
+});
+```
+
+**Python:**
+
+```python
+from botcha import BotchaClient
+
+async with BotchaClient(app_id="app_abc123") as client:
+    agent = await client.register_tap_agent(
+        name="my-agent",
+        operator="Acme Corp",
+        capabilities=[{"action": "browse", "scope": ["products"]}],
+        trust_level="verified",
+    )
+
+    session = await client.create_tap_session(
+        agent_id=agent.agent_id,
+        user_context="user-hash",
+        intent={"action": "browse", "resource": "products", "duration": 3600},
+    )
+```
 
 ### TAP Verification Middleware (Express)
 

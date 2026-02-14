@@ -46,8 +46,8 @@ Nobody is building the agent-side identity layer. Everyone is building "block bo
 - `human_link` field in `/v1/token/verify` response (primary human handoff mechanism)
 
 #### SDKs & Integration
-- `@dupecom/botcha` npm package (v0.10.0) — TypeScript client SDK with app lifecycle methods
-- `botcha` PyPI package (v0.3.0) — Python SDK with app lifecycle methods
+- `@dupecom/botcha` npm package (v0.13.1) — TypeScript client SDK with app lifecycle methods + TAP methods (`registerTAPAgent`, `getTAPAgent`, `listTAPAgents`, `createTAPSession`, `getTAPSession`)
+- `botcha` PyPI package (v0.4.0) — Python SDK with app lifecycle methods + TAP methods (`register_tap_agent`, `get_tap_agent`, `list_tap_agents`, `create_tap_session`, `get_tap_session`)
 - `@botcha/verify` npm package (v0.1.0) — Server-side verification (Express/Hono)
 - `botcha-verify` PyPI package (v0.1.0) — Server-side verification (FastAPI/Django)
 - Express middleware (`botcha.verify()`)
@@ -161,6 +161,8 @@ Every token gets a unique `jti` claim for revocation tracking and audit trail.
 - Capabilities: action + resource + optional constraints (e.g., `{action: "read", resource: "/api/invoices"}`)
 - Intent parsing with structured validation
 - SHA-256 key fingerprinting
+- **SDK support:** TypeScript (`registerTAPAgent`, `getTAPAgent`, `listTAPAgents`, `createTAPSession`, `getTAPSession`) and Python equivalents
+- Express middleware: `createTAPVerifyMiddleware` via `@dupecom/botcha/middleware`
 - Express middleware with verification modes: `tap`, `signature-only`, `challenge-only`, `flexible`
 - KV storage: `SESSIONS` namespace for TAP sessions, `AGENTS` namespace for TAP agent data
 **Effort:** Large

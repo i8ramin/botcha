@@ -36,7 +36,7 @@ Use cases:
 - 📧 Email verification, account recovery, and secret rotation
 - 🤖 Agent-first dashboard auth (challenge-based login + device code handoff)
 - 🆔 Persistent agent identities with registry
-- 🔏 Trusted Agent Protocol (TAP) — cryptographic agent auth with HTTP Message Signatures
+- 🔏 Trusted Agent Protocol (TAP) — cryptographic agent auth with HTTP Message Signatures (SDK: `registerTAPAgent`, `createTAPSession`)
 
 ## Install
 
@@ -415,6 +415,51 @@ curl -X POST https://botcha.ai/v1/sessions/tap \
 | `GET /v1/agents/tap` | List TAP-enabled agents for app |
 | `POST /v1/sessions/tap` | Create TAP session with intent validation |
 | `GET /v1/sessions/:id/tap` | Get TAP session info |
+
+### TAP SDK Methods
+
+**TypeScript:**
+
+```typescript
+import { BotchaClient } from '@dupecom/botcha/client';
+
+const client = new BotchaClient({ appId: 'app_abc123' });
+
+// Register a TAP agent
+const agent = await client.registerTAPAgent({
+  name: 'my-agent',
+  operator: 'Acme Corp',
+  capabilities: [{ action: 'browse', scope: ['products'] }],
+  trust_level: 'verified',
+});
+
+// Create a TAP session
+const session = await client.createTAPSession({
+  agent_id: agent.agent_id,
+  user_context: 'user-hash',
+  intent: { action: 'browse', resource: 'products', duration: 3600 },
+});
+```
+
+**Python:**
+
+```python
+from botcha import BotchaClient
+
+async with BotchaClient(app_id="app_abc123") as client:
+    agent = await client.register_tap_agent(
+        name="my-agent",
+        operator="Acme Corp",
+        capabilities=[{"action": "browse", "scope": ["products"]}],
+        trust_level="verified",
+    )
+
+    session = await client.create_tap_session(
+        agent_id=agent.agent_id,
+        user_context="user-hash",
+        intent={"action": "browse", "resource": "products", "duration": 3600},
+    )
+```
 
 ### Express Middleware (Verification Modes)
 
