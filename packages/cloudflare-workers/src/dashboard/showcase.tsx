@@ -1067,7 +1067,7 @@ const BOTCHA_LOGO = `\u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2
 
 // ============ PAGE COMPONENT ============
 
-export const ShowcasePage: FC<{ version: string }> = ({ version }) => {
+export const ShowcasePage: FC<{ version: string; error?: string }> = ({ version, error }) => {
   return (
     <html lang="en">
       <head>
@@ -1098,6 +1098,13 @@ export const ShowcasePage: FC<{ version: string }> = ({ version }) => {
       </head>
       <body>
         <div class="showcase-page">
+
+          {/* ---- Error Banner (from expired /go/ links etc.) ---- */}
+          {error && (
+            <div style="max-width: 600px; margin: 1.5rem auto 0; padding: 1rem 1.25rem; background: #fff3f0; border: 1px solid #cc3300; font-family: 'JetBrains Mono', monospace; font-size: 0.8125rem; color: #992200; line-height: 1.5; text-align: center;">
+              {error}
+            </div>
+          )}
 
           {/* ---- Logo ---- */}
           <div style="text-align: center; padding: 3rem 2rem 0;">

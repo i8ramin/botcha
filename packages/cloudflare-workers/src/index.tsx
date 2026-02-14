@@ -224,15 +224,25 @@ app.get('/', async (c) => {
     }
   }
 
-  // HTML: showcase page for human browsers
+   // HTML: showcase page for human browsers
   if (preference === 'html') {
-    // If redirected from /go/:code after a successful gate code redemption, show verified page
     const url = new URL(c.req.url);
+
+    // If redirected from /go/:code after a successful gate code redemption, show verified page
     if (url.searchParams.get('verified') === 'true') {
       const solveTime = parseInt(url.searchParams.get('t') || '0', 10) || undefined;
       return c.html(<VerifiedLandingPage version={version} solveTime={solveTime} />);
     }
-    return c.html(<ShowcasePage version={version} />);
+
+    // If redirected with an error (e.g. expired /go/ link), show error on showcase
+    const errorParam = url.searchParams.get('error');
+    const errorMessages: Record<string, string> = {
+      invalid: 'That link is expired or has already been used. Ask your agent for a new one.',
+      missing: 'No code was provided. Ask your agent for a link.',
+    };
+    const error = errorParam ? errorMessages[errorParam] || undefined : undefined;
+
+    return c.html(<ShowcasePage version={version} error={error} />);
   }
 
   // === UNVERIFIED: minimal teaser — just enough to get started ===
