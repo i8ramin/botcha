@@ -237,8 +237,8 @@ app.get('/', async (c) => {
     // If redirected with an error (e.g. expired /go/ link), show error on showcase
     const errorParam = url.searchParams.get('error');
     const errorMessages: Record<string, string> = {
-      invalid: 'That link is expired or has already been used. Ask your agent for a new one.',
-      missing: 'No code was provided. Ask your agent for a link.',
+      invalid: 'That link is expired or has already been used. Paste the prompt below into your AI agent to get a new one.',
+      missing: 'No code was provided. Paste the prompt below into your AI agent to get a link.',
     };
     const error = errorParam ? errorMessages[errorParam] || undefined : undefined;
 
