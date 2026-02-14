@@ -1,6 +1,6 @@
 {
   "name": "@dupecom/botcha-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI tool for testing and debugging BOTCHA-protected endpoints",
   "type": "module",
   "main": "dist/index.js",
