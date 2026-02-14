@@ -184,39 +184,26 @@ async function requireJWT(c: Context<{ Bindings: Bindings; Variables: Variables 
 // ============ ROOT & INFO ============
 
 // Detect request preference: 'markdown' | 'json' | 'html'
-// Agents like Claude Code and OpenCode send Accept: text/markdown
+// Strategy: only return JSON/markdown when explicitly requested or from
+// known CLI tools. Default to HTML so social crawlers, OG checkers,
+// link preview bots, and browsers all get proper OG meta tags.
 function detectAcceptPreference(c: Context<{ Bindings: Bindings; Variables: Variables }>): 'markdown' | 'json' | 'html' {
   const accept = c.req.header('accept') || '';
   const userAgent = (c.req.header('user-agent') || '').toLowerCase();
 
-  // Explicit markdown preference (Cloudflare Markdown for Agents convention)
+  // 1. Explicit Accept header preference (most reliable signal)
   if (accept.includes('text/markdown')) return 'markdown';
+  if (accept.includes('application/json') && !accept.includes('text/html')) return 'json';
 
-  // Explicit JSON preference
-  if (accept.includes('application/json')) return 'json';
+  // 2. Known CLI tools that don't set Accept headers properly → JSON
+  const cliTools = ['curl', 'httpie', 'wget'];
+  if (cliTools.some(s => userAgent.includes(s))) return 'json';
 
-  // Social media crawlers need HTML for OG meta tag previews
-  // These contain "bot" in their UA but must get HTML, not JSON
-  const socialCrawlers = [
-    'twitterbot', 'slackbot', 'facebookexternalhit', 'facebot',
-    'linkedinbot', 'whatsapp', 'telegrambot', 'discordbot',
-    'applebot', 'pinterestbot', 'redditbot',
-    'embedly', 'quora link preview', 'outbrain',
-    'rogerbot', 'showyoubot', 'slurp',
-    'vkshare', 'tumblr', 'skypeuripreview',
-    'google-inspectiontool', 'petalbot',
-    'iframely', 'developers.google.com',
-  ];
-  if (socialCrawlers.some(s => userAgent.includes(s))) return 'html';
-
-  // Known bot user agents → JSON
-  const botSignals = ['curl', 'httpie', 'wget', 'python', 'node', 'axios', 'fetch', 'bot', 'anthropic', 'openai', 'claude', 'gpt'];
-  if (botSignals.some(s => userAgent.includes(s))) return 'json';
-  
-  // No user agent at all → probably a bot
+  // 3. No user agent at all → probably a programmatic client
   if (!userAgent) return 'json';
 
-  // Default: human browser → HTML
+  // 4. Everything else gets HTML — browsers, social crawlers, OG checkers,
+  //    link preview bots, search engines, etc.
   return 'html';
 }
 
