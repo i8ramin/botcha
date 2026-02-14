@@ -38,7 +38,7 @@ import {
 import { ROBOTS_TXT, AI_TXT, AI_PLUGIN_JSON, SITEMAP_XML, getOpenApiSpec, getBotchaMarkdown } from './static';
 import { createApp, getApp, getAppByEmail, verifyEmailCode, rotateAppSecret, regenerateVerificationCode } from './apps';
 import { sendEmail, verificationEmail, recoveryEmail, secretRotatedEmail } from './email';
-import { LandingPage } from './dashboard/landing';
+import { LandingPage, VerifiedLandingPage } from './dashboard/landing';
 import { ShowcasePage } from './dashboard/showcase';
 import { createAgent, getAgent, listAgents } from './agents';
 import {
@@ -225,6 +225,12 @@ app.get('/', async (c) => {
 
   // HTML: showcase page for human browsers
   if (preference === 'html') {
+    // If redirected from /go/:code after a successful gate code redemption, show verified page
+    const url = new URL(c.req.url);
+    if (url.searchParams.get('verified') === 'true') {
+      const solveTime = parseInt(url.searchParams.get('t') || '0', 10) || undefined;
+      return c.html(<VerifiedLandingPage version={version} solveTime={solveTime} />);
+    }
     return c.html(<ShowcasePage version={version} />);
   }
 
@@ -2018,9 +2024,11 @@ app.get('/go/:code', async (c) => {
         .sign(new TextEncoder().encode(c.env.JWT_SECRET));
 
       const ONE_YEAR = 365 * 24 * 60 * 60;
+      const solveTime = vPayload?.solveTime as number | undefined;
+      const redirectUrl = solveTime ? `/?verified=true&t=${solveTime}` : '/?verified=true';
       const headers = new Headers();
       headers.append('Set-Cookie', `botcha_visitor=${visitorToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${ONE_YEAR}`);
-      headers.set('Location', '/');
+      headers.set('Location', redirectUrl);
       return new Response(null, { status: 302, headers });
     }
     // Gate token expired — fall through to try device code
