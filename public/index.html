@@ -39,7 +39,7 @@
       "priceCurrency": "USD"
     },
     "operatingSystem": "Any",
-    "softwareVersion": "0.12.0",
+    "softwareVersion": "0.13.1",
     "author": {
       "@type": "Person",
       "name": "Ramin"
@@ -433,6 +433,29 @@ curl "https://botcha.ai/v1/challenges?app_id=app_abc123"</code></pre>
         <p style="margin-top: 1rem; color: #888;">
           <strong>SDK Support:</strong> TypeScript (<code>appId</code> option) and Python (<code>app_id</code> param).
           Tokens include <code>app_id</code> claim for verification.
+        </p>
+      </div>
+      
+      <div class="box">
+        <h3>🔏 Trusted Agent Protocol (TAP)</h3>
+        <p style="line-height: 1.8;">
+          Enterprise-grade cryptographic agent authentication using HTTP Message Signatures (RFC 9421).
+          Register public keys, declare capabilities, and create intent-scoped sessions.
+        </p>
+        <pre><code>// TypeScript SDK
+const agent = await client.registerTAPAgent({
+  name: 'my-agent',
+  capabilities: [{ action: 'browse', scope: ['products'] }],
+  trust_level: 'verified',
+});
+
+const session = await client.createTAPSession({
+  agent_id: agent.agent_id,
+  user_context: 'user-hash',
+  intent: { action: 'browse', resource: 'products' },
+});</code></pre>
+        <p style="margin-top: 1rem; color: #888;">
+          Available in TypeScript (<code>@dupecom/botcha/client</code>) and Python (<code>botcha</code>) SDKs.
         </p>
       </div>
     </div>

@@ -150,6 +150,7 @@ Formula: \`timeout = 500ms + (2 × RTT) + 100ms buffer\`
 | PyPI | \`botcha\` | \`pip install botcha\` |
 | Verify (TS) | \`@botcha/verify\` | \`npm install @botcha/verify\` |
 | Verify (Python) | \`botcha-verify\` | \`pip install botcha-verify\` |
+| TAP middleware | \`@dupecom/botcha/middleware\` | \`import { createTAPVerifyMiddleware } from '@dupecom/botcha/middleware'\` |
 
 ## Discovery
 
@@ -420,6 +421,9 @@ TAP-Session-Get: GET /v1/sessions/:id/tap — includes time_remaining
 TAP-Get-Agent: GET /v1/agents/:id/tap — includes public_key for verification
 TAP-List-Agents: GET /v1/agents/tap?app_id=...&tap_only=true
 TAP-Middleware-Modes: tap, signature-only, challenge-only, flexible
+TAP-SDK-TS: registerTAPAgent(options), getTAPAgent(agentId), listTAPAgents(tapOnly?), createTAPSession(options), getTAPSession(sessionId)
+TAP-SDK-Python: register_tap_agent(name, ...), get_tap_agent(agent_id), list_tap_agents(tap_only?), create_tap_session(agent_id, user_context, intent), get_tap_session(session_id)
+TAP-Middleware-Import: import { createTAPVerifyMiddleware } from '@dupecom/botcha/middleware'
 
 # EMBEDDED CHALLENGE (for bots visiting HTML pages)
 Embedded-Challenge: <script type="application/botcha+json">
