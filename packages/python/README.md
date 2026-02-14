@@ -109,6 +109,48 @@ print(answers)  # ['8d969eef', 'ca2f2c8f']
 
 Close the underlying HTTP client. Automatically called when using async context manager.
 
+##### `async create_app(email: str) -> CreateAppResponse`
+
+Create a new BOTCHA app. Returns `app_id` and `app_secret`.
+
+##### `async verify_email(code: str, app_id: str = None) -> VerifyEmailResponse`
+
+Verify email with 6-digit code sent to your email.
+
+##### `async resend_verification(app_id: str = None) -> ResendVerificationResponse`
+
+Resend the email verification code.
+
+##### `async recover_account(email: str) -> RecoverAccountResponse`
+
+Request account recovery via verified email.
+
+##### `async rotate_secret(app_id: str = None) -> RotateSecretResponse`
+
+Rotate the app secret. Old secret is immediately invalidated.
+
+##### TAP (Trusted Agent Protocol) Methods
+
+##### `async register_tap_agent(name, operator=None, version=None, public_key=None, signature_algorithm=None, capabilities=None, trust_level=None, issuer=None) -> TAPAgentResponse`
+
+Register an agent with TAP capabilities including cryptographic identity and capability-scoped permissions.
+
+##### `async get_tap_agent(agent_id: str) -> TAPAgentResponse`
+
+Get a TAP agent by ID, including public key and verification status.
+
+##### `async list_tap_agents(tap_only: bool = False) -> TAPAgentListResponse`
+
+List TAP agents for the current app. Set `tap_only=True` to filter to TAP-enabled agents only.
+
+##### `async create_tap_session(agent_id: str, user_context: str, intent: dict) -> TAPSessionResponse`
+
+Create a TAP session with intent validation. The intent dict should include `action`, and optionally `resource`, `scope`, and `duration`.
+
+##### `async get_tap_session(session_id: str) -> TAPSessionResponse`
+
+Get a TAP session by ID, including time remaining before expiry.
+
 ---
 
 ### `solve_botcha(problems: list[int]) -> list[str]`
@@ -243,6 +285,36 @@ async def main():
         print(f"Request failed: {e}")
     except Exception as e:
         print(f"Unexpected error: {e}")
+
+asyncio.run(main())
+```
+
+### TAP (Trusted Agent Protocol)
+
+Enterprise-grade cryptographic agent authentication:
+
+```python
+import asyncio
+from botcha import BotchaClient
+
+async def main():
+    async with BotchaClient(app_id="app_abc123") as client:
+        # Register a TAP agent
+        agent = await client.register_tap_agent(
+            name="my-agent",
+            operator="Acme Corp",
+            trust_level="verified",
+            capabilities=[{"action": "browse", "scope": ["products"]}],
+        )
+        print(f"Agent ID: {agent.agent_id}")
+
+        # Create a TAP session
+        session = await client.create_tap_session(
+            agent_id=agent.agent_id,
+            user_context="user-hash",
+            intent={"action": "browse", "resource": "products", "duration": 3600},
+        )
+        print(f"Session expires: {session.expires_at}")
 
 asyncio.run(main())
 ```

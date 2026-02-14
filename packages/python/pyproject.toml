@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "botcha"
 version = "0.4.0"
-description = "BOTCHA Python SDK - Prove you're a bot. Humans need not apply."
+description = "BOTCHA Python SDK - Reverse CAPTCHA for AI agents. Challenges, JWT tokens, app management, and Trusted Agent Protocol (TAP)."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
     { name = "Ramin", email = "ramin@dupe.com" }
 ]
-keywords = ["captcha", "bot", "ai", "agent", "verification", "sdk", "authentication"]
+keywords = ["captcha", "bot", "ai", "agent", "verification", "sdk", "authentication", "tap", "trusted-agent-protocol"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
