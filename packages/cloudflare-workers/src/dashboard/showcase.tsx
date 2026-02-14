@@ -743,10 +743,12 @@ const LIVE_DEMO_SCRIPT = `
       })
       .then(function(data) {
         var challenge = data.challenge;
-        if (!challenge || !challenge.numbers) throw new Error('Invalid challenge format');
+        if (!challenge || !challenge.problems) throw new Error('Invalid challenge format');
+
+        var numbers = challenge.problems.map(function(p) { return p.num; });
 
         return Promise.all(
-          challenge.numbers.map(function(n) { return sha256(String(n)); })
+          numbers.map(function(n) { return sha256(String(n)); })
         ).then(function(answers) {
           return fetch('https://botcha.ai/v1/token/verify', {
             method: 'POST',
@@ -762,8 +764,8 @@ const LIVE_DEMO_SCRIPT = `
             var tokenPreview = token.substring(0, 24) + '...';
 
             resultDiv.innerHTML =
-              '<div class="showcase-livedemo-result-line"><span class="showcase-livedemo-label">Challenge:</span> <span class="showcase-livedemo-value">' + challenge.numbers.length + ' SHA-256 hashes</span></div>' +
-              '<div class="showcase-livedemo-result-line"><span class="showcase-livedemo-label">Numbers:</span> <span class="showcase-livedemo-value">[' + challenge.numbers.join(', ') + ']</span></div>' +
+              '<div class="showcase-livedemo-result-line"><span class="showcase-livedemo-label">Challenge:</span> <span class="showcase-livedemo-value">' + numbers.length + ' SHA-256 hashes</span></div>' +
+              '<div class="showcase-livedemo-result-line"><span class="showcase-livedemo-label">Numbers:</span> <span class="showcase-livedemo-value">[' + numbers.join(', ') + ']</span></div>' +
               '<div class="showcase-livedemo-result-line"><span class="showcase-livedemo-label">Answers:</span> <span class="showcase-livedemo-value">["' + answers.join('", "') + '"]</span></div>' +
               '<div class="showcase-livedemo-result-line"><span class="showcase-livedemo-label">Solve time:</span> <span class="' + timeClass + '">' + solveTime + 'ms</span></div>' +
               '<div class="showcase-livedemo-result-line"><span class="showcase-livedemo-status-success">VERIFIED \\u2014 You are a bot.</span></div>' +
