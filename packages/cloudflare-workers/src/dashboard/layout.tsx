@@ -7,6 +7,44 @@
 import type { FC, PropsWithChildren } from 'hono/jsx';
 import { DASHBOARD_CSS } from './styles';
 
+// ============ OG META COMPONENT ============
+
+/**
+ * Shared Open Graph + Twitter Card meta tags.
+ * Use on every page so social previews always work.
+ * Pass overrides for page-specific titles/descriptions.
+ */
+export const OGMeta: FC<{
+  title?: string;
+  description?: string;
+  url?: string;
+  type?: string;
+  image?: string;
+}> = ({
+  title = 'BOTCHA — The Identity Layer for AI Agents',
+  description = 'Reverse CAPTCHA — Prove you\'re a bot. Humans need not apply. One of the first services to support the Trusted Agent Protocol (TAP).',
+  url = 'https://botcha.ai',
+  type = 'website',
+  image = 'https://botcha.ai/og.png',
+}) => (
+  <>
+    {/* Open Graph */}
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={url} />
+    <meta property="og:type" content={type} />
+    <meta property="og:image" content={image} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    {/* Twitter Card */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
+  </>
+);
+
 // ============ CARD COMPONENT ============
 
 /**
@@ -103,13 +141,7 @@ export const DashboardLayout: FC<PropsWithChildren<{ title?: string; appId?: str
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title || 'BOTCHA Dashboard'}</title>
-        <meta property="og:title" content="BOTCHA — The Identity Layer for AI Agents" />
-        <meta property="og:description" content="Reverse CAPTCHA — Prove you're a bot. Humans need not apply." />
-        <meta property="og:image" content="https://botcha.ai/og.png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content="https://botcha.ai/og.png" />
+        <OGMeta url="https://botcha.ai/dashboard" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
@@ -152,13 +184,7 @@ export const LoginLayout: FC<PropsWithChildren<{ title?: string; version?: strin
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title || 'BOTCHA Login'}</title>
-        <meta property="og:title" content="BOTCHA — The Identity Layer for AI Agents" />
-        <meta property="og:description" content="Reverse CAPTCHA — Prove you're a bot. Humans need not apply." />
-        <meta property="og:image" content="https://botcha.ai/og.png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content="https://botcha.ai/og.png" />
+        <OGMeta url="https://botcha.ai/dashboard/login" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
@@ -200,20 +226,7 @@ export const LandingLayout: FC<PropsWithChildren<{ version: string }>> = ({ chil
         <meta name="ai-agent-welcome" content="true" />
         <meta name="botcha-challenge" content="embedded" data-selector="script[type='application/botcha+json']" />
 
-        {/* Open Graph */}
-        <meta property="og:title" content="BOTCHA — The Identity Layer for AI Agents" />
-        <meta property="og:description" content="Reverse CAPTCHA — Prove you're a bot. Humans need not apply. One of the first services to support the Trusted Agent Protocol (TAP)." />
-        <meta property="og:url" content="https://botcha.ai" />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content="https://botcha.ai/og.png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:type" content="image/png" />
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="BOTCHA — The Identity Layer for AI Agents" />
-        <meta name="twitter:description" content="Reverse CAPTCHA — Prove you're a bot. Humans need not apply." />
-        <meta name="twitter:image" content="https://botcha.ai/og.png" />
+        <OGMeta />
 
         {/* Schema.org */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({

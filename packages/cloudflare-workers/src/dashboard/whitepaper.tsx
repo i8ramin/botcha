@@ -10,7 +10,7 @@
 
 import type { FC } from 'hono/jsx';
 import { DASHBOARD_CSS } from './styles';
-import { GlobalFooter } from './layout';
+import { GlobalFooter, OGMeta } from './layout';
 
 // ============ WHITEPAPER CSS ============
 
@@ -401,16 +401,12 @@ export const WhitepaperPage: FC<{ version: string }> = ({ version }) => {
         <meta name="description" content="Technical whitepaper on BOTCHA: reverse CAPTCHA for AI agents, Trusted Agent Protocol (TAP), and identity infrastructure for the agentic web." />
         <meta name="keywords" content="BOTCHA, whitepaper, AI agent identity, Trusted Agent Protocol, TAP, reverse CAPTCHA, agent verification, RFC 9421" />
 
-        {/* Open Graph */}
-        <meta property="og:title" content="BOTCHA Whitepaper — Identity Infrastructure for the Agentic Web" />
-        <meta property="og:description" content="How BOTCHA provides proof of AI, proof of identity, and proof of intent for the agentic web." />
-        <meta property="og:url" content="https://botcha.ai/whitepaper" />
-        <meta property="og:type" content="article" />
-
-        {/* Twitter */}
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content="BOTCHA Whitepaper" />
-        <meta name="twitter:description" content="Identity infrastructure for the agentic web. Reverse CAPTCHA + Trusted Agent Protocol." />
+        <OGMeta
+          title="BOTCHA Whitepaper — Identity Infrastructure for the Agentic Web"
+          description="How BOTCHA provides proof of AI, proof of identity, and proof of intent for the agentic web."
+          url="https://botcha.ai/whitepaper"
+          type="article"
+        />
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
