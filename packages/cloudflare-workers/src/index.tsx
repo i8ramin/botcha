@@ -2148,6 +2148,34 @@ app.get('/go/:code', async (c) => {
   return c.redirect('/?error=invalid');
 });
 
+// GET /verified - Handle direct verification links with base64 tokens
+app.get('/verified', async (c) => {
+  const version = c.env.BOTCHA_VERSION || '0.16.0';
+  const token = c.req.query('token');
+  
+  if (!token) {
+    return c.html(<LandingPage version={version} error="Missing verification token." />, 400);
+  }
+
+  try {
+    // Decode base64 token - format should be: hwt_<agent>:<token>:<type>
+    const decoded = atob(token);
+    const parts = decoded.split(':');
+    
+    if (parts.length !== 3) {
+      return c.html(<LandingPage version={version} error="Invalid token format." />, 400);
+    }
+    
+    const [agentId, agentToken, tokenType] = parts;
+    
+    // For now, we'll show a success page if the token decodes properly
+    // In the future, this could verify against a stored registry of agent tokens
+    return c.html(<VerifiedLandingPage version={version} />);
+  } catch (error) {
+    return c.html(<LandingPage version={version} error="Invalid or corrupted token." />, 400);
+  }
+});
+
 // ============ LEGACY ENDPOINTS (v0 - backward compatibility) ============
 
 app.get('/api/challenge', async (c) => {
