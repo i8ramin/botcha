@@ -33,7 +33,7 @@ type Bindings = {
   CHALLENGES: KVNamespace;
   RATE_LIMITS: KVNamespace;
   APPS: KVNamespace;
-  ANALYTICS?: AnalyticsEngineDataset;
+  ANALYTICS?: any;
   JWT_SECRET: string;
   BOTCHA_VERSION: string;
 };

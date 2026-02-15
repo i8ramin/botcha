@@ -210,7 +210,7 @@ app.get('/', async (c) => {
     const result = await verifyToken(token, c.env.JWT_SECRET, c.env);
     if (result.valid) {
       isVerified = true;
-      tokenPayload = result.payload as Record<string, unknown> | undefined;
+      tokenPayload = result.payload as any;
     }
   }
 
@@ -450,7 +450,7 @@ app.post('/gate', async (c) => {
 
   // Mint a long-lived visitor JWT (1 year) — only proves "an agent vouched for this human"
   // This is NOT an access token and cannot be used for API calls
-  const vPayload = result.payload as Record<string, unknown> | undefined;
+  const vPayload = result.payload as any;
   const visitorToken = await new SignJWT({
     type: 'botcha-visitor',
     solveTime: vPayload?.solveTime as number | undefined,
@@ -1369,7 +1369,7 @@ app.get('/agent-only', async (c) => {
   }
 
   // JWT verified — echo back rich identity info as a prove-and-access demo
-  const payload = result.payload as Record<string, unknown> | undefined;
+  const payload = result.payload as any;
   return c.json({
     success: true,
     message: 'Welcome, verified agent. This resource is only accessible to BOTCHA-verified bots.',
